@@ -51,19 +51,19 @@
                 <span class="brand-text">Universal Reviewer</span>
             </div>
 
-            <!-- Center: Score Display -->
-            <div style="display:flex;align-items:center;gap:0.5rem">
+            <!-- Center: Desktop Score Display -->
+            <div class="score-container-desktop">
                 <div class="score-pill score-pill-correct" title="Correct Answers">
                     <i class="fas fa-check" style="font-size:0.625rem"></i>
-                    <span id="score-correct">0</span>
+                    <span class="score-correct-val">0</span>
                 </div>
                 <div class="score-pill score-pill-incorrect" title="Incorrect Answers">
                     <i class="fas fa-xmark" style="font-size:0.625rem"></i>
-                    <span id="score-incorrect">0</span>
+                    <span class="score-incorrect-val">0</span>
                 </div>
                 <div class="score-pill" style="background:rgba(59,130,246,0.1);color:var(--blue-600);border:1px solid rgba(59,130,246,0.2)" title="Total Points">
                     <i class="fas fa-star" style="font-size:0.625rem"></i>
-                    <span id="score-points">0</span>
+                    <span class="score-points-val">0</span>
                 </div>
             </div>
 
@@ -85,9 +85,9 @@
                 </button>
 
                 <!-- Sign In Button (shown when no user) -->
-                <button class="btn btn-sm btn-primary" id="btn-sign-in" style="gap:0.375rem">
+                <button class="btn btn-sm btn-primary btn-sign-in-responsive" id="btn-sign-in" style="gap:0.375rem">
                     <i class="fab fa-google" style="font-size:0.75rem"></i>
-                    <span>Sign In</span>
+                    <span class="btn-sign-in-label">Sign In</span>
                 </button>
 
                 <!-- Guest Label -->
@@ -110,6 +110,22 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Mobile Score Sub-Bar -->
+        <div class="score-container-mobile">
+            <div class="score-pill score-pill-correct" title="Correct Answers">
+                <i class="fas fa-check" style="font-size:0.625rem"></i>
+                <span class="score-correct-val">0</span>
+            </div>
+            <div class="score-pill score-pill-incorrect" title="Incorrect Answers">
+                <i class="fas fa-xmark" style="font-size:0.625rem"></i>
+                <span class="score-incorrect-val">0</span>
+            </div>
+            <div class="score-pill" style="background:rgba(59,130,246,0.1);color:var(--blue-600);border:1px solid rgba(59,130,246,0.2)" title="Total Points">
+                <i class="fas fa-star" style="font-size:0.625rem"></i>
+                <span class="score-points-val">0</span>
             </div>
         </div>
     </header>
@@ -151,7 +167,7 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                <div class="dashboard-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap">
                     <button id="btn-review-now" class="btn btn-primary" style="flex:1" disabled>
                         <i class="fas fa-play"></i>
                         <span>Review Now</span>
@@ -226,7 +242,7 @@
                     </div>
 
                     <!-- Answer Input -->
-                    <div style="display:flex;gap:0.5rem">
+                    <div class="ident-form-row" style="display:flex;gap:0.5rem">
                         <input type="text" id="ident-input" class="input" placeholder="Type your answer here..." autocomplete="off" style="flex:1">
                         <button id="btn-submit-ident" class="btn btn-primary" style="flex-shrink:0">
                             <i class="fas fa-paper-plane"></i>

@@ -1048,13 +1048,17 @@ const processResult = (isCorrect, userAnswer, correctAnswer, points) => {
 };
 
 const updateScoreDisplay = () => {
-  const correctEl = $('score-correct');
-  const incorrectEl = $('score-incorrect');
-  const pointsEl = $('score-points');
-
-  if (correctEl) { correctEl.textContent = appState.quiz.score.correct; correctEl.closest('.score-pill')?.classList.add('bump'); setTimeout(() => correctEl.closest('.score-pill')?.classList.remove('bump'), 400); }
-  if (incorrectEl) incorrectEl.textContent = appState.quiz.score.incorrect;
-  if (pointsEl) pointsEl.textContent = appState.quiz.score.points;
+  document.querySelectorAll('.score-correct-val').forEach(el => {
+    el.textContent = appState.quiz.score.correct;
+    el.closest('.score-pill')?.classList.add('bump');
+    setTimeout(() => el.closest('.score-pill')?.classList.remove('bump'), 400);
+  });
+  document.querySelectorAll('.score-incorrect-val').forEach(el => {
+    el.textContent = appState.quiz.score.incorrect;
+  });
+  document.querySelectorAll('.score-points-val').forEach(el => {
+    el.textContent = appState.quiz.score.points;
+  });
 };
 
 // ======================== LEADERBOARD ========================
