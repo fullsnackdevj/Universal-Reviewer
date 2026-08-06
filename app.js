@@ -304,7 +304,6 @@ const renderAuthUI = () => {
   const userSection = $('user-section');
   const userAvatar = $('user-avatar-img');
   const userName = $('user-display-name');
-  const guestLabel = $('guest-label');
 
   if (appState.user) {
     if (signInBtn) signInBtn.classList.add('hidden');
@@ -318,11 +317,18 @@ const renderAuthUI = () => {
       }
     }
     if (userName) userName.textContent = appState.user.displayName;
-    if (guestLabel) guestLabel.classList.add('hidden');
+
+    // User is logged in: Unlock app to dashboard
+    const authWall = $('screen-auth-wall');
+    if (authWall && authWall.classList.contains('active')) {
+      showScreen('screen-dashboard');
+    }
   } else {
     if (signInBtn) signInBtn.classList.remove('hidden');
     if (userSection) userSection.classList.add('hidden');
-    if (guestLabel) guestLabel.classList.remove('hidden');
+
+    // User is not logged in: Lock app with mandatory Google Sign-In Wall
+    showScreen('screen-auth-wall');
   }
 };
 
@@ -1496,9 +1502,12 @@ const wireEvents = () => {
   const lbModal = $('modal-leaderboard');
   if (lbModal) lbModal.onclick = (e) => { if (e.target === lbModal) toggleModal(lbModal, false); };
 
-  // Sign in button
+  // Sign in buttons (Header & Landing Auth Wall)
   const signInBtn = $('btn-sign-in');
   if (signInBtn) signInBtn.onclick = signInWithGoogle;
+
+  const wallSignInBtn = $('btn-wall-google-login');
+  if (wallSignInBtn) wallSignInBtn.onclick = signInWithGoogle;
 
   // Sign out from menu
   const signOutBtn = $('btn-sign-out');
