@@ -466,7 +466,7 @@ const extractTextFromImage = async (file) => {
 
     if (progressContainer) progressContainer.classList.add('hidden');
     return text || '';
-  } catch (e) {
+    } catch (e) {
     if (progressContainer) progressContainer.classList.add('hidden');
     console.error('OCR Error:', e);
     showToast({ type: 'error', title: 'OCR Failed', message: `Could not scan "${file.name}".` });
@@ -479,12 +479,33 @@ const extractTextFromPDF = async (file) => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n';
+      let lastY = null;
+      let pageText = '';
+
+      for (const item of content.items) {
+        if (!item.str) continue;
+
+        // Preserve line breaks using vertical Y coordinate shift or hasEOL flag
+        const currentY = item.transform ? item.transform[5] : null;
+        if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 4) {
+          pageText += '\n';
+        } else if (item.hasEOL) {
+          pageText += '\n';
+        } else if (pageText.length > 0 && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
+          pageText += ' ';
+        }
+
+        pageText += item.str;
+        if (currentY !== null) lastY = currentY;
+      }
+
+      fullText += pageText + '\n\n';
     }
+
     return fullText;
   } catch (e) {
     console.error('PDF parse error:', e);
@@ -518,6 +539,7 @@ const extractTextFromSpreadsheet = async (file) => {
     return fullText;
   } catch (e) {
     console.error('Spreadsheet parse error:', e);
+    showToast({ type: 'Spreadsheet Error', title: 'Spreadsheet Error', message: `Could not parse "${file.name}".` });
     return '';
   }
 };
@@ -551,13 +573,18 @@ const parseTermsFromText = (text) => {
   if (!text || !text.trim()) return [];
 
   const items = [];
-  const rawLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const rawLines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
 
-  // Helpers
-  const cleanTerm = (t) => t.replace(/^[\d\.\)\-\•\*\#]+\s*/, '').replace(/[:\-–—]+$/, '').trim();
+  const cleanTerm = (t) => t
+    .replace(/^[●○•\*\-\#\s\d\.\)\,\:\;]+/, '')
+    .replace(/[:\-–—\s]+$/, '')
+    .trim();
 
   const isJunkTerm = (t) => {
-    if (!t || t.length < 2 || t.length > 80) return true;
+    if (!t || t.length < 2 || t.length > 90) return true;
     if (/^(page|table|figure|chapter|section|module|lesson|unit|note|reference|source|http|www|copyright|©)/i.test(t)) return true;
     if (/^\d+$/.test(t)) return true;
     return false;
@@ -576,10 +603,10 @@ const parseTermsFromText = (text) => {
 
   const isNewItemStart = (line) => {
     if (!line) return true;
-    return /^[\d]+[\.\)]/.test(line.trim()) ||
-           /^[A-Z][A-Za-z\s\(\)\-\/]{2,50}\s*[:–—\-]\s/.test(line.trim()) ||
-           /^#{1,6}\s/.test(line.trim()) ||
-           /^[\•\*\-]\s/.test(line.trim());
+    const l = line.trim();
+    return /^[●○•\*\-\#]/.test(l) ||
+           /^\d+[\.\)]/.test(l) ||
+           /^[A-Za-z0-9\s\(\)\-\/]{1,60}\s*[:–—\-]\s/.test(l);
   };
 
   const parseTermAndAliases = (raw) => {
@@ -596,12 +623,17 @@ const parseTermsFromText = (text) => {
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i];
 
-    // Pattern: "Term: Definition" or "Term - Definition" or "Term – Definition"
-    const inlineMatch = line.match(/^([A-Za-z0-9][A-Za-z0-9\s\(\)\-\/\,\'\"\.]{1,60})\s*[:–—\-]\s+(.+)$/);
-    // Pattern: Q&A format
+    // Pattern 1: Inline "Term: Definition" or "● 5. Term - Definition" or "1. Term: Def"
+    const inlineMatch = line.match(/^(?:[●○•\*\-\#\s]|\d+[\.\)]\s*)*([A-Za-z0-9][A-Za-z0-9\s\(\)\-\/\,\'\"\.]{1,70})\s*[:–—\-]\s+(.+)$/);
+    
+    // Pattern 2: Q&A format ("Q: Question A: Answer")
     const qaMatch = line.match(/^(?:Q|Question)\s*[:\.\-]\s*(.+?)\s*(?:A|Answer)\s*[:\.\-]\s*(.+)$/i);
-    // Pattern: Heading (standalone capitalized line)
-    const headingMatch = line.match(/^(?:\d+[\.\)]\s*|#{1,6}\s+)?([A-Z0-9][A-Za-z0-9\s\(\)\-\/\,]{2,60})$/);
+
+    // Pattern 3: Tabular format ("CTRL + Z    Undo")
+    const tableMatch = line.match(/^([A-Za-z0-9\s\+\-\(\)]{2,40})\s{2,}(.+)$/);
+
+    // Pattern 4: Heading format
+    const headingMatch = line.match(/^(?:\d+[\.\)]\s*|#{1,6}\s+|[●○•\*\-]\s+)?([A-Z0-9][A-Za-z0-9\s\(\)\-\/\,]{2,70})$/);
 
     if (qaMatch && qaMatch[1] && qaMatch[2]) {
       const qText = qaMatch[1].replace(/^(what|who|which|how|why|is|are|define|explain)\s+(is|are|the|a|an)?\s*/i, '').replace(/\?$/, '').trim();
@@ -614,7 +646,7 @@ const parseTermsFromText = (text) => {
       }
 
       const defCandidate = formatDefinition(rawDef);
-      if (!isJunkTerm(termCandidate) && defCandidate.length >= 5) {
+      if (!isJunkTerm(termCandidate) && defCandidate.length >= 4) {
         const { primaryTerm, aliases } = parseTermAndAliases(termCandidate);
         items.push({ term: primaryTerm, def: defCandidate, alias: aliases.length ? aliases : undefined });
       }
@@ -628,14 +660,22 @@ const parseTermsFromText = (text) => {
       }
 
       const cleanedTerm = cleanTerm(rawTerm);
-      if (!isJunkTerm(cleanedTerm) && rawDef.length >= 4) {
+      const formattedDef = formatDefinition(rawDef);
+
+      if (!isJunkTerm(cleanedTerm) && formattedDef.length >= 4) {
         const { primaryTerm, aliases } = parseTermAndAliases(cleanedTerm);
-        const formattedDef = formatDefinition(rawDef);
 
-        if (currentHeading && !primaryTerm.toLowerCase().includes(currentHeading.toLowerCase())) {
-          aliases.push(`${currentHeading} - ${primaryTerm}`);
-        }
-
+        items.push({
+          term: primaryTerm,
+          def: formattedDef,
+          alias: aliases.length > 0 ? Array.from(new Set(aliases)) : undefined
+        });
+      }
+    } else if (tableMatch && tableMatch[1] && tableMatch[2]) {
+      const cleanedTerm = cleanTerm(tableMatch[1]);
+      const formattedDef = formatDefinition(tableMatch[2]);
+      if (!isJunkTerm(cleanedTerm) && formattedDef.length >= 3) {
+        const { primaryTerm, aliases } = parseTermAndAliases(cleanedTerm);
         items.push({
           term: primaryTerm,
           def: formattedDef,
@@ -656,7 +696,7 @@ const parseTermsFromText = (text) => {
           rawDef += ' ' + rawLines[i].trim();
         }
 
-        if (rawDef.length >= 10 && !isJunkTerm(rawDef)) {
+        if (rawDef.length >= 8 && !isJunkTerm(rawDef)) {
           const { primaryTerm, aliases } = parseTermAndAliases(headingCandidate);
           const formattedDef = formatDefinition(rawDef);
           items.push({
@@ -669,8 +709,19 @@ const parseTermsFromText = (text) => {
     }
   }
 
+  // Deduplicate items by term name
+  const uniqueItems = [];
+  const seenTerms = new Set();
+  for (const item of items) {
+    const key = item.term.toLowerCase();
+    if (!seenTerms.has(key)) {
+      seenTerms.add(key);
+      uniqueItems.push(item);
+    }
+  }
+
   // Fallback: parse "X is Y" sentence patterns
-  if (items.length < 5) {
+  if (uniqueItems.length < 5) {
     const sentences = text.split(/(?<=[.?!])\s+/);
     sentences.forEach(s => {
       const match = s.match(/^([A-Z][A-Za-z0-9\s\(\)\-]{2,45})\s+(is|are|refers to|executes|provides|converts|acts as|serves as|is defined as)\s+(.+)$/i);
