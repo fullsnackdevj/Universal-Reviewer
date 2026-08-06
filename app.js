@@ -329,6 +329,7 @@ const checkUserApprovalStatus = async (user) => {
 
     if (docSnap.exists) {
       const data = docSnap.data();
+      appState.isAdmin = (emailClean === ADMIN_EMAIL.toLowerCase()) || (data && data.role === 'admin');
       if (data.status === 'approved') {
         appState.isApproved = true;
         return true;
@@ -391,9 +392,10 @@ const renderAuthUI = async () => {
     if (userName) userName.textContent = appState.user.displayName || appState.user.email;
 
     const isApproved = await checkUserApprovalStatus(appState.user);
-
     if (adminBtn) {
-      if (appState.isAdmin) {
+      const userEmail = (appState.user && appState.user.email) ? appState.user.email.toLowerCase().trim() : '';
+      const isSuperAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+      if (appState.isAdmin || isSuperAdmin) {
         adminBtn.classList.remove('hidden');
       } else {
         adminBtn.classList.add('hidden');
@@ -438,43 +440,38 @@ const renderAdminUsersList = (searchQuery = '') => {
   if (filtered.length === 0) {
     container.innerHTML = `
       <div style="text-align:center;padding:2rem;color:var(--text-muted)">
-        <i class="fas fa-users-slash" style="font-size:1.5rem;margin-bottom:0.5rem;display:block"></i>
-        <span>No matching users found</span>
+        No matching users found
       </div>
     `;
     return;
   }
 
   container.innerHTML = filtered.map(u => {
+    const isSelf = appState.user && u.email.toLowerCase() === appState.user.email.toLowerCase();
     const isApproved = u.status === 'approved';
     const isAdmin = u.role === 'admin' || u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-    const statusBadge = isApproved 
-      ? `<span class="badge badge-success" style="font-size:0.6875rem"><i class="fas fa-check-circle"></i> Approved</span>`
-      : `<span class="badge badge-warning" style="font-size:0.6875rem"><i class="fas fa-clock"></i> Pending</span>`;
-    
-    const avatar = u.photoURL 
-      ? `<img src="${u.photoURL}" style="width:2rem;height:2rem;border-radius:50%" referrerpolicy="no-referrer">`
-      : `<div style="width:2rem;height:2rem;border-radius:50%;background:var(--blue-500);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.875rem">${(u.displayName || u.email)[0].toUpperCase()}</div>`;
 
     return `
       <div class="card" style="padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;background:var(--surface-primary);border:1px solid var(--border-default)">
-        <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;flex:1">
-          ${avatar}
+        <div style="display:flex;align-items:center;gap:0.75rem;overflow:hidden">
+          <div style="width:2.25rem;height:2.25rem;border-radius:50%;background:linear-gradient(135deg,var(--blue-500),var(--purple));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.875rem;flex-shrink:0;overflow:hidden">
+            ${u.photoURL ? `<img src="${escapeHtml(u.photoURL)}" alt="User" style="width:100%;height:100%;object-fit:cover">` : escapeHtml((u.displayName || u.email).charAt(0).toUpperCase())}
+          </div>
           <div style="min-width:0">
-            <div style="font-size:0.875rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:0.375rem" class="truncate">
-              <span>${u.displayName || 'User'}</span>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <span style="font-weight:700;font-size:0.875rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.displayName || u.email.split('@')[0])}</span>
               ${isAdmin ? `<span class="badge badge-blue" style="font-size:0.625rem;padding:0.1rem 0.35rem">ADMIN</span>` : ''}
             </div>
-            <div style="font-size:0.75rem;color:var(--text-secondary)" class="truncate">${u.email}</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.email)}</div>
           </div>
         </div>
-        
+
         <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-          ${statusBadge}
           ${!isAdmin ? `
             ${isApproved ? `
-              <button onclick="toggleUserApproval('${encodeURIComponent(u.email)}', 'pending')" class="btn btn-sm btn-secondary" style="padding:0.375rem 0.625rem;font-size:0.75rem;color:var(--danger)" title="Revoke Access">
-                <i class="fas fa-ban"></i> Revoke
+              <span class="badge badge-success" style="font-size:0.75rem;padding:0.25rem 0.625rem"><i class="fas fa-circle-check"></i> Approved</span>
+              <button onclick="toggleUserApproval('${encodeURIComponent(u.email)}', 'pending')" class="btn btn-sm btn-ghost" style="color:var(--warning);padding:0.375rem;font-size:0.75rem" title="Revoke Access">
+                <i class="fas fa-ban"></i>
               </button>
             ` : `
               <button onclick="toggleUserApproval('${encodeURIComponent(u.email)}', 'approved')" class="btn btn-sm btn-primary" style="padding:0.375rem 0.625rem;font-size:0.75rem" title="Approve Access">
@@ -492,7 +489,10 @@ const renderAdminUsersList = (searchQuery = '') => {
 };
 
 const openAdminModal = () => {
-  if (!appState.isAdmin) {
+  const userEmail = (appState.user && appState.user.email) ? appState.user.email.toLowerCase().trim() : '';
+  const isSuperAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+
+  if (!appState.isAdmin && !isSuperAdmin) {
     showToast({ type: 'error', title: 'Access Denied', message: 'Only the administrator can access the Admin Panel.' });
     return;
   }
