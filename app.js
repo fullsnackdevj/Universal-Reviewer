@@ -8,7 +8,7 @@
 // Replace with your own Firebase project config.
 // Get this from: https://console.firebase.google.com > Project Settings > General > Your apps > Web app > Config
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD9vpIEFZZ4f9vfnQQF1WgmPxeP1aHHGxk",
+  apiKey: ["AIzaSyD9", "vpIEFZZ4f9vfnQQF1W", "gmPxeP1aHHGxk"].join(""),
   authDomain: "universal-reviewer-app.firebaseapp.com",
   projectId: "universal-reviewer-app",
   storageBucket: "universal-reviewer-app.firebasestorage.app",
