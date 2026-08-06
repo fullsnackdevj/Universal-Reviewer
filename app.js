@@ -1547,12 +1547,83 @@ const renderManagerReviewerList = () => {
 
 const updateUploadTargetDropdown = () => {
   const select = $('upload-target-reviewer');
-  if (!select) return;
+  const pasteSelect = $('paste-target-reviewer');
 
-  select.innerHTML = '<option value="__new__">➕ Create New Reviewer</option>' +
+  const optionsHtml = '<option value="__new__">➕ Create New Reviewer</option>' +
     appState.reviewers.map(r =>
       `<option value="${r.id}" ${r.id === appState.activeReviewerId ? 'selected' : ''}>${escapeHtml(r.name)}</option>`
     ).join('');
+
+  if (select) select.innerHTML = optionsHtml;
+  if (pasteSelect) pasteSelect.innerHTML = optionsHtml;
+};
+
+const handleProcessPastedText = () => {
+  const textarea = $('paste-notes-input');
+  const text = textarea ? textarea.value.trim() : '';
+
+  if (!text) {
+    showToast({ type: 'warning', title: 'Empty Notes', message: 'Please paste your study notes or text into the field first.' });
+    return;
+  }
+
+  const targetSelect = $('paste-target-reviewer');
+  let reviewer = null;
+
+  if (targetSelect && targetSelect.value && targetSelect.value !== '__new__') {
+    reviewer = appState.reviewers.find(r => r.id === targetSelect.value);
+  }
+
+  if (!reviewer) {
+    const reviewerNameInput = $('reviewer-name-input');
+    let reviewerName = reviewerNameInput ? reviewerNameInput.value.trim() : '';
+    if (!reviewerName) {
+      const firstLine = text.split('\n')[0].replace(/^[#●○•\*\-\s\d\.\)\:]+/, '').trim();
+      reviewerName = (firstLine.length > 0 && firstLine.length <= 40) ? firstLine : `Pasted Notes (${new Date().toLocaleDateString()})`;
+    }
+    reviewer = createReviewer(reviewerName);
+  }
+
+  const parsedItems = parseTermsFromText(text);
+
+  if (parsedItems.length === 0) {
+    showToast({
+      type: 'error',
+      title: 'No Terms Detected',
+      message: 'Could not extract terms/definitions from the text. Make sure notes include terms and definitions separated by colons, dashes, or bullet points.'
+    });
+    return;
+  }
+
+  const existingMap = new Map();
+  reviewer.items.forEach(i => existingMap.set(i.term.toLowerCase(), i));
+  let addedCount = 0;
+
+  parsedItems.forEach(item => {
+    const key = item.term.toLowerCase();
+    if (!existingMap.has(key)) {
+      existingMap.set(key, item);
+      reviewer.items.push(item);
+      addedCount++;
+    }
+  });
+
+  reviewer.updatedAt = Date.now();
+  appState.activeReviewerId = reviewer.id;
+  saveReviewers();
+
+  if (textarea) textarea.value = '';
+
+  renderDashboard();
+  renderManagerContent();
+
+  toggleModal($('modal-manager'), false);
+
+  showToast({
+    type: 'success',
+    title: 'Notes Scanned!',
+    message: `Extracted ${parsedItems.length} study items (${addedCount} new added) for "${reviewer.name}".`
+  });
 };
 
 const renderManagerTermsEditor = () => {
@@ -1788,6 +1859,36 @@ const wireEvents = () => {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) processUploadedFiles(e.dataTransfer.files);
     };
   }
+
+  // Paste Notes Tab Switching & Scanner Action
+  const tabUpload = $('tab-btn-upload');
+  const tabPaste = $('tab-btn-paste');
+  const uploadSection = $('manager-upload-section');
+  const pasteSection = $('manager-paste-section');
+
+  if (tabUpload && tabPaste && uploadSection && pasteSection) {
+    tabUpload.onclick = () => {
+      tabUpload.className = 'btn btn-sm btn-primary';
+      tabUpload.style.color = '';
+      tabPaste.className = 'btn btn-sm btn-ghost';
+      tabPaste.style.color = 'var(--text-secondary)';
+      uploadSection.classList.remove('hidden');
+      pasteSection.classList.add('hidden');
+    };
+
+    tabPaste.onclick = () => {
+      tabPaste.className = 'btn btn-sm btn-primary';
+      tabPaste.style.color = '';
+      tabUpload.className = 'btn btn-sm btn-ghost';
+      tabUpload.style.color = 'var(--text-secondary)';
+      pasteSection.classList.remove('hidden');
+      uploadSection.classList.add('hidden');
+      if ($('paste-notes-input')) $('paste-notes-input').focus();
+    };
+  }
+
+  const btnProcessPasted = $('btn-process-pasted-text');
+  if (btnProcessPasted) btnProcessPasted.onclick = handleProcessPastedText;
 
   // Quiz: Next question
   const nextBtn = $('btn-next-question');

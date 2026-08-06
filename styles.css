@@ -671,7 +671,9 @@ body {
   box-shadow: var(--shadow-xl);
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   transform: scale(0.95) translateY(10px);
   transition: transform var(--transition-smooth);
 }
