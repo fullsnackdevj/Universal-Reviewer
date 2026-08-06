@@ -860,12 +860,13 @@ const parseTermsFromText = (text) => {
   const rawLines = unwrapText(text);
 
   const cleanTerm = (t) => t
-    .replace(/^[●○•\*\-\#\s\d\.\)\,\:\;]+/, '')
+    .replace(/^[●○•\*\-\#\s]+/, '')
+    .replace(/^(?:\d{1,3}[\.\)]\s+)+/, '')
     .replace(/[:\-–—\s]+$/, '')
     .trim();
 
   const isJunkTerm = (t) => {
-    if (!t || t.length < 2 || t.length > 90) return true;
+    if (!t || t.length < 1 || t.length > 90) return true;
     // Check if term ends with dangling conjunction/preposition
     if (/\b(and|or|the|a|an|of|in|to|for|with|on|at|by|from|as|into|like|through|after|over|between|out|against|during|without|before|under|around|among)\s*$/i.test(t)) return true;
     // Check if term starts with conjunction
@@ -891,11 +892,11 @@ const parseTermsFromText = (text) => {
     const l = line.trim();
     return /^[●○•\*\-\#]/.test(l) ||
            /^\d+[\.\)]/.test(l) ||
-           /^[A-Za-z0-9\s\(\)\-\/]{1,60}\s*[:–—\-]\s/.test(l);
+           /^[A-Za-z0-9\.\"\']{1,60}\s*[:–—\-]\s/.test(l);
   };
 
   const parseTermAndAliases = (raw) => {
-    const aliasSeparators = /\s*(?:\/|\bor\b|\baka\b|\balso known as\b)\s*/i;
+    const aliasSeparators = /\s+\/\s+|\s+(?:or|aka|also known as)\s+/i;
     if (aliasSeparators.test(raw)) {
       const parts = raw.split(aliasSeparators).map(s => s.trim()).filter(Boolean);
       return { primaryTerm: parts[0], aliases: parts.slice(1) };
@@ -928,7 +929,7 @@ const parseTermsFromText = (text) => {
     const line = rawLines[i];
 
     // Pattern 1: Inline "Term: Definition" or "● 5. Term - Definition" or "1. Term: Def"
-    const inlineMatch = line.match(/^(?:[●○•\*\-\#\s]|\d+[\.\)]\s*)*([A-Za-z0-9][A-Za-z0-9\s\(\)\-\/\,\'\"\.]{1,70})\s*[:–—\-]\s+(.+)$/);
+    const inlineMatch = line.match(/^(?:[●○•\*\-\#\s]|\d+[\.\)]\s*)*([A-Za-z0-9\.\"\'][A-Za-z0-9\s\(\)\-\/\,\'\"\.]{0,75})\s*[:–—\-]\s+(.+)$/);
     
     // Pattern 2: Q&A format ("Q: Question A: Answer")
     const qaMatch = line.match(/^(?:Q|Question)\s*[:\.\-]\s*(.+?)\s*(?:A|Answer)\s*[:\.\-]\s*(.+)$/i);
