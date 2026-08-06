@@ -990,8 +990,8 @@ const parseTermsFromText = (text) => {
     });
   }
 
-  // Deduplicate
-  const uniqueItems = [];
+  // Final Deduplication
+  const finalUniqueItems = [];
   const seen = new Set();
   items.forEach(item => {
     const clean = cleanTerm(item.term);
@@ -999,12 +999,12 @@ const parseTermsFromText = (text) => {
       const key = clean.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
-        uniqueItems.push({ ...item, term: clean });
+        finalUniqueItems.push({ ...item, term: clean });
       }
     }
   });
 
-  return uniqueItems;
+  return finalUniqueItems;
 };
 
 // ======================== FILE UPLOAD PROCESSOR ========================
