@@ -69,13 +69,13 @@
 
             <!-- Right: Actions -->
             <div class="header-actions">
-                <!-- Stats Button -->
-                <button class="btn btn-ghost btn-icon" id="btn-stats" title="Session Stats">
+                <!-- Stats Button (Desktop) -->
+                <button class="btn btn-ghost btn-icon btn-stats-desktop" id="btn-stats" title="Session Stats">
                     <i class="fas fa-chart-simple"></i>
                 </button>
 
-                <!-- Leaderboard Button -->
-                <button class="btn btn-ghost btn-icon" id="btn-leaderboard" title="Leaderboard">
+                <!-- Leaderboard Button (Desktop) -->
+                <button class="btn btn-ghost btn-icon btn-lb-desktop" id="btn-leaderboard" title="Leaderboard">
                     <i class="fas fa-trophy"></i>
                 </button>
 
@@ -85,19 +85,16 @@
                 </button>
 
                 <!-- Sign In Button (shown when no user) -->
-                <button class="btn btn-sm btn-primary btn-sign-in-responsive" id="btn-sign-in" style="gap:0.375rem">
+                <button class="btn btn-sm btn-primary" id="btn-sign-in" style="gap:0.375rem">
                     <i class="fab fa-google" style="font-size:0.75rem"></i>
-                    <span class="btn-sign-in-label">Sign In</span>
+                    <span>Sign In</span>
                 </button>
-
-                <!-- Guest Label -->
-                <span id="guest-label" class="hidden" style="font-size:0.75rem;color:var(--text-muted);font-weight:500">Guest</span>
 
                 <!-- User Section (shown when signed in) -->
                 <div id="user-section" class="hidden" style="position:relative">
-                    <button id="user-menu-trigger" style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;cursor:pointer;padding:0.25rem">
+                    <button id="user-menu-trigger" style="display:flex;align-items:center;gap:0.375rem;background:none;border:none;cursor:pointer;padding:0.25rem">
                         <img id="user-avatar-img" class="user-avatar hidden" src="" alt="Avatar" referrerpolicy="no-referrer">
-                        <span id="user-display-name" style="font-size:0.8125rem;font-weight:600;color:var(--text-primary);max-width:8rem" class="truncate"></span>
+                        <span id="user-display-name" style="font-size:0.8125rem;font-weight:600;color:var(--text-primary);max-width:6rem" class="truncate"></span>
                         <i class="fas fa-chevron-down" style="font-size:0.5rem;color:var(--text-muted)"></i>
                     </button>
 
@@ -113,7 +110,7 @@
             </div>
         </div>
 
-        <!-- Mobile Score Sub-Bar -->
+        <!-- Mobile Sub-Header: Clean Status & Quick Action Bar -->
         <div class="score-container-mobile">
             <div class="score-pill score-pill-correct" title="Correct Answers">
                 <i class="fas fa-check" style="font-size:0.625rem"></i>
@@ -127,6 +124,13 @@
                 <i class="fas fa-star" style="font-size:0.625rem"></i>
                 <span class="score-points-val">0</span>
             </div>
+            <div class="mobile-nav-divider"></div>
+            <button class="mobile-action-btn" id="btn-stats-mobile" title="Session Stats">
+                <i class="fas fa-chart-simple"></i>
+            </button>
+            <button class="mobile-action-btn" id="btn-leaderboard-mobile" title="Leaderboard">
+                <i class="fas fa-trophy" style="color:var(--warning)"></i>
+            </button>
         </div>
     </header>
 

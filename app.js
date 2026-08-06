@@ -1450,11 +1450,12 @@ const wireEvents = () => {
   if (identInput) identInput.onkeypress = (e) => { if (e.key === 'Enter') handleIdentAnswer(); };
 
   // Stats modal
-  const statsBtn = $('btn-stats');
-  if (statsBtn) statsBtn.onclick = () => {
+  const openStatsHandler = () => {
     renderStatsModal();
     toggleModal($('modal-stats'), true);
   };
+  if ($('btn-stats')) $('btn-stats').onclick = openStatsHandler;
+  if ($('btn-stats-mobile')) $('btn-stats-mobile').onclick = openStatsHandler;
 
   const closeStatsBtn = $('btn-close-stats');
   if (closeStatsBtn) closeStatsBtn.onclick = () => toggleModal($('modal-stats'), false);
@@ -1482,11 +1483,12 @@ const wireEvents = () => {
   };
 
   // Leaderboard modal
-  const lbBtn = $('btn-leaderboard');
-  if (lbBtn) lbBtn.onclick = () => {
+  const openLbHandler = () => {
     renderLeaderboardModal();
     toggleModal($('modal-leaderboard'), true);
   };
+  if ($('btn-leaderboard')) $('btn-leaderboard').onclick = openLbHandler;
+  if ($('btn-leaderboard-mobile')) $('btn-leaderboard-mobile').onclick = openLbHandler;
 
   const closeLbBtn = $('btn-close-leaderboard');
   if (closeLbBtn) closeLbBtn.onclick = () => toggleModal($('modal-leaderboard'), false);
