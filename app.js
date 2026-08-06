@@ -821,14 +821,43 @@ const extractTextFromPptx = async (file) => {
 };
 
 // ======================== TERM EXTRACTION ENGINE ========================
+// ======================== TERM EXTRACTION ENGINE ========================
 const parseTermsFromText = (text) => {
   if (!text || !text.trim()) return [];
 
-  const items = [];
-  const rawLines = text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0);
+  // Soft Line Unwrapping: Join lines that end without punctuation or with dangling words
+  const unwrapText = (input) => {
+    const lines = input.split('\n');
+    const result = [];
+    let buffer = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) {
+        if (buffer) { result.push(buffer); buffer = ''; }
+        continue;
+      }
+
+      if (!buffer) {
+        buffer = line;
+      } else {
+        const danglingEnd = /\b(and|or|the|a|an|of|in|to|for|with|on|at|by|from|as|into|like|through|after|over|between|out|against|during|without|before|under|around|among|that|which|who|is|are|was|were)\s*$/i.test(buffer);
+        const endsPunct = /[.:;?!—–\-]\s*$/.test(buffer);
+        const startsLower = /^[a-z0-9,]/.test(line);
+
+        if (danglingEnd || (!endsPunct && (startsLower || buffer.length > 50))) {
+          buffer += ' ' + line;
+        } else {
+          result.push(buffer);
+          buffer = line;
+        }
+      }
+    }
+    if (buffer) result.push(buffer);
+    return result;
+  };
+
+  const rawLines = unwrapText(text);
 
   const cleanTerm = (t) => t
     .replace(/^[●○•\*\-\#\s\d\.\)\,\:\;]+/, '')
@@ -837,6 +866,10 @@ const parseTermsFromText = (text) => {
 
   const isJunkTerm = (t) => {
     if (!t || t.length < 2 || t.length > 90) return true;
+    // Check if term ends with dangling conjunction/preposition
+    if (/\b(and|or|the|a|an|of|in|to|for|with|on|at|by|from|as|into|like|through|after|over|between|out|against|during|without|before|under|around|among)\s*$/i.test(t)) return true;
+    // Check if term starts with conjunction
+    if (/^(and|or|but|so|because|although|which|that|who|where|when)\s+/i.test(t)) return true;
     if (/^(page|table|figure|chapter|section|module|lesson|unit|note|reference|source|http|www|copyright|©)/i.test(t)) return true;
     if (/^\d+$/.test(t)) return true;
     return false;
@@ -870,6 +903,25 @@ const parseTermsFromText = (text) => {
     return { primaryTerm: raw, aliases: [] };
   };
 
+  // Helper to fix inverted terms or terms that are actually definitions
+  const sanitizeItem = (term, def) => {
+    let finalTerm = cleanTerm(term);
+    let finalDef = formatDefinition(def);
+
+    // If term contains a relative clause / descriptive verb phrase, or if term is long and def is short
+    const isDescriptiveTerm = /\b(that|which|used to|designed to|refers to|is defined as|responsible for|manages|handles|provides|converts|acts as|serves as)\b/i.test(finalTerm);
+    
+    if ((isDescriptiveTerm || finalTerm.length > 45) && finalDef.length < 35 && !/\b(that|which|manages|handles)\b/i.test(finalDef)) {
+      // Inverted! Flip them
+      const temp = finalTerm;
+      finalTerm = finalDef;
+      finalDef = temp;
+    }
+
+    return { term: finalTerm, def: finalDef };
+  };
+
+  const items = [];
   let currentHeading = null;
 
   for (let i = 0; i < rawLines.length; i++) {
@@ -889,7 +941,6 @@ const parseTermsFromText = (text) => {
 
     if (qaMatch && qaMatch[1] && qaMatch[2]) {
       const qText = qaMatch[1].replace(/^(what|who|which|how|why|is|are|define|explain)\s+(is|are|the|a|an)?\s*/i, '').replace(/\?$/, '').trim();
-      const termCandidate = cleanTerm(qText);
       let rawDef = qaMatch[2].trim();
 
       while (i + 1 < rawLines.length && !isNewItemStart(rawLines[i + 1])) {
@@ -897,10 +948,10 @@ const parseTermsFromText = (text) => {
         rawDef += ' ' + rawLines[i].trim();
       }
 
-      const defCandidate = formatDefinition(rawDef);
-      if (!isJunkTerm(termCandidate) && defCandidate.length >= 4) {
-        const { primaryTerm, aliases } = parseTermAndAliases(termCandidate);
-        items.push({ term: primaryTerm, def: defCandidate, alias: aliases.length ? aliases : undefined });
+      const { term, def } = sanitizeItem(qText, rawDef);
+      if (!isJunkTerm(term) && def.length >= 4) {
+        const { primaryTerm, aliases } = parseTermAndAliases(term);
+        items.push({ term: primaryTerm, def, alias: aliases.length ? aliases : undefined });
       }
     } else if (inlineMatch && inlineMatch[1] && inlineMatch[2]) {
       const rawTerm = inlineMatch[1].trim();
@@ -911,26 +962,23 @@ const parseTermsFromText = (text) => {
         rawDef += ' ' + rawLines[i].trim();
       }
 
-      const cleanedTerm = cleanTerm(rawTerm);
-      const formattedDef = formatDefinition(rawDef);
+      const { term, def } = sanitizeItem(rawTerm, rawDef);
 
-      if (!isJunkTerm(cleanedTerm) && formattedDef.length >= 4) {
-        const { primaryTerm, aliases } = parseTermAndAliases(cleanedTerm);
-
+      if (!isJunkTerm(term) && def.length >= 4) {
+        const { primaryTerm, aliases } = parseTermAndAliases(term);
         items.push({
           term: primaryTerm,
-          def: formattedDef,
+          def,
           alias: aliases.length > 0 ? Array.from(new Set(aliases)) : undefined
         });
       }
     } else if (tableMatch && tableMatch[1] && tableMatch[2]) {
-      const cleanedTerm = cleanTerm(tableMatch[1]);
-      const formattedDef = formatDefinition(tableMatch[2]);
-      if (!isJunkTerm(cleanedTerm) && formattedDef.length >= 3) {
-        const { primaryTerm, aliases } = parseTermAndAliases(cleanedTerm);
+      const { term, def } = sanitizeItem(tableMatch[1], tableMatch[2]);
+      if (!isJunkTerm(term) && def.length >= 3) {
+        const { primaryTerm, aliases } = parseTermAndAliases(term);
         items.push({
           term: primaryTerm,
-          def: formattedDef,
+          def,
           alias: aliases.length > 0 ? Array.from(new Set(aliases)) : undefined
         });
       }
@@ -949,13 +997,15 @@ const parseTermsFromText = (text) => {
         }
 
         if (rawDef.length >= 8 && !isJunkTerm(rawDef)) {
-          const { primaryTerm, aliases } = parseTermAndAliases(headingCandidate);
-          const formattedDef = formatDefinition(rawDef);
-          items.push({
-            term: primaryTerm,
-            def: formattedDef,
-            alias: aliases.length > 0 ? aliases : undefined
-          });
+          const { term, def } = sanitizeItem(headingCandidate, rawDef);
+          if (!isJunkTerm(term)) {
+            const { primaryTerm, aliases } = parseTermAndAliases(term);
+            items.push({
+              term: primaryTerm,
+              def,
+              alias: aliases.length > 0 ? aliases : undefined
+            });
+          }
         }
       }
     }
@@ -978,12 +1028,11 @@ const parseTermsFromText = (text) => {
     sentences.forEach(s => {
       const match = s.match(/^([A-Z][A-Za-z0-9\s\(\)\-]{2,45})\s+(is|are|refers to|executes|provides|converts|acts as|serves as|is defined as)\s+(.+)$/i);
       if (match) {
-        const termCandidate = cleanTerm(match[1]);
         const verb = match[2];
         const rest = match[3].trim();
-        if (!isJunkTerm(termCandidate) && rest.length >= 8) {
-          const { primaryTerm, aliases } = parseTermAndAliases(termCandidate);
-          const def = formatDefinition(`${verb} ${rest}`);
+        const { term, def } = sanitizeItem(match[1], `${verb} ${rest}`);
+        if (!isJunkTerm(term) && def.length >= 8) {
+          const { primaryTerm, aliases } = parseTermAndAliases(term);
           items.push({ term: primaryTerm, def, alias: aliases.length ? aliases : undefined });
         }
       }
