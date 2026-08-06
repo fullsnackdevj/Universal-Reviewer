@@ -3,7 +3,11 @@
     "providers": {
       "googleSignIn": {
         "oAuthBrandDisplayName": "Universal Reviewer",
-        "supportEmail": "jayfullsnackdev@gmail.com"
+        "supportEmail": "jayfullsnackdev@gmail.com",
+        "authorizedRedirectUris": [
+          "https://universal-reviewer.netlify.app/__/auth/handler",
+          "https://universal-reviewer.netlify.app"
+        ]
       }
     }
   },
