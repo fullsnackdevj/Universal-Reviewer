@@ -39,9 +39,13 @@ const initFirebase = () => {
   }
 };
 
-// ======================== APP STATE ========================
+// ======================== APP CONSTANTS & STATE ========================
+const ADMIN_EMAIL = 'jayfullsnackdev@gmail.com';
+
 const appState = {
   user: null,              // { uid, displayName, email, photoURL }
+  isApproved: false,
+  isAdmin: false,
   reviewers: [],           // Array of reviewer objects
   activeReviewerId: null,
   quiz: {
@@ -285,7 +289,74 @@ const signOut = async () => {
   }
 };
 
-const onAuthStateChange = (user) => {
+const checkUserApprovalStatus = async (user) => {
+  if (!user || !user.email) return false;
+
+  const emailClean = user.email.toLowerCase().trim();
+  const docId = encodeURIComponent(emailClean);
+
+  // Super Admin (jayfullsnackdev@gmail.com) is always approved & admin
+  if (emailClean === ADMIN_EMAIL.toLowerCase()) {
+    appState.isApproved = true;
+    appState.isAdmin = true;
+    if (db) {
+      try {
+        await db.collection('allowed_users').doc(docId).set({
+          email: emailClean,
+          displayName: user.displayName || 'Admin',
+          photoURL: user.photoURL || '',
+          status: 'approved',
+          role: 'admin',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Admin record sync warning:', e);
+      }
+    }
+    return true;
+  }
+
+  appState.isAdmin = false;
+
+  if (!db) {
+    appState.isApproved = true;
+    return true;
+  }
+
+  try {
+    const userDocRef = db.collection('allowed_users').doc(docId);
+    const docSnap = await userDocRef.get();
+
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      if (data.status === 'approved') {
+        appState.isApproved = true;
+        return true;
+      } else {
+        appState.isApproved = false;
+        return false;
+      }
+    } else {
+      // First time student sign in: create pending approval request doc
+      await userDocRef.set({
+        email: emailClean,
+        displayName: user.displayName || emailClean.split('@')[0],
+        photoURL: user.photoURL || '',
+        status: 'pending',
+        role: 'student',
+        requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      appState.isApproved = false;
+      return false;
+    }
+  } catch (e) {
+    console.error('Error checking approval status:', e);
+    appState.isApproved = false;
+    return false;
+  }
+};
+
+const onAuthStateChange = async (user) => {
   if (user) {
     appState.user = {
       uid: user.uid,
@@ -296,14 +367,15 @@ const onAuthStateChange = (user) => {
   } else {
     appState.user = null;
   }
-  renderAuthUI();
+  await renderAuthUI();
 };
 
-const renderAuthUI = () => {
+const renderAuthUI = async () => {
   const signInBtn = $('btn-sign-in');
   const userSection = $('user-section');
   const userAvatar = $('user-avatar-img');
   const userName = $('user-display-name');
+  const adminBtn = $('btn-admin-panel');
 
   if (appState.user) {
     if (signInBtn) signInBtn.classList.add('hidden');
@@ -316,19 +388,199 @@ const renderAuthUI = () => {
         userAvatar.classList.add('hidden');
       }
     }
-    if (userName) userName.textContent = appState.user.displayName;
+    if (userName) userName.textContent = appState.user.displayName || appState.user.email;
 
-    // User is logged in: Unlock app to dashboard
-    const authWall = $('screen-auth-wall');
-    if (authWall && authWall.classList.contains('active')) {
-      showScreen('screen-dashboard');
+    const isApproved = await checkUserApprovalStatus(appState.user);
+
+    if (adminBtn) {
+      if (appState.isAdmin) {
+        adminBtn.classList.remove('hidden');
+      } else {
+        adminBtn.classList.add('hidden');
+      }
+    }
+
+    if (isApproved) {
+      const authWall = $('screen-auth-wall');
+      const pendingScreen = $('screen-pending-approval');
+      if ((authWall && authWall.classList.contains('active')) || (pendingScreen && pendingScreen.classList.contains('active'))) {
+        showScreen('screen-dashboard');
+      }
+    } else {
+      const pendingEmailEl = $('pending-user-email');
+      if (pendingEmailEl) pendingEmailEl.textContent = appState.user.email;
+      showScreen('screen-pending-approval');
     }
   } else {
+    appState.isApproved = false;
+    appState.isAdmin = false;
     if (signInBtn) signInBtn.classList.remove('hidden');
     if (userSection) userSection.classList.add('hidden');
+    if (adminBtn) adminBtn.classList.add('hidden');
 
-    // User is not logged in: Lock app with mandatory Google Sign-In Wall
     showScreen('screen-auth-wall');
+  }
+};
+
+// ======================== ADMIN PANEL ENGINE ========================
+let adminUnsubscribe = null;
+let allAdminUsers = [];
+
+const renderAdminUsersList = (searchQuery = '') => {
+  const container = $('admin-users-list');
+  if (!container) return;
+
+  const query = searchQuery.toLowerCase().trim();
+  const filtered = allAdminUsers.filter(u => 
+    !query || u.email.toLowerCase().includes(query) || (u.displayName && u.displayName.toLowerCase().includes(query))
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:2rem;color:var(--text-muted)">
+        <i class="fas fa-users-slash" style="font-size:1.5rem;margin-bottom:0.5rem;display:block"></i>
+        <span>No matching users found</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(u => {
+    const isApproved = u.status === 'approved';
+    const isAdmin = u.role === 'admin' || u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    const statusBadge = isApproved 
+      ? `<span class="badge badge-success" style="font-size:0.6875rem"><i class="fas fa-check-circle"></i> Approved</span>`
+      : `<span class="badge badge-warning" style="font-size:0.6875rem"><i class="fas fa-clock"></i> Pending</span>`;
+    
+    const avatar = u.photoURL 
+      ? `<img src="${u.photoURL}" style="width:2rem;height:2rem;border-radius:50%" referrerpolicy="no-referrer">`
+      : `<div style="width:2rem;height:2rem;border-radius:50%;background:var(--blue-500);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.875rem">${(u.displayName || u.email)[0].toUpperCase()}</div>`;
+
+    return `
+      <div class="card" style="padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;background:var(--surface-primary);border:1px solid var(--border-default)">
+        <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;flex:1">
+          ${avatar}
+          <div style="min-width:0">
+            <div style="font-size:0.875rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:0.375rem" class="truncate">
+              <span>${u.displayName || 'User'}</span>
+              ${isAdmin ? `<span class="badge badge-blue" style="font-size:0.625rem;padding:0.1rem 0.35rem">ADMIN</span>` : ''}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-secondary)" class="truncate">${u.email}</div>
+          </div>
+        </div>
+        
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+          ${statusBadge}
+          ${!isAdmin ? `
+            ${isApproved ? `
+              <button onclick="toggleUserApproval('${encodeURIComponent(u.email)}', 'pending')" class="btn btn-sm btn-secondary" style="padding:0.375rem 0.625rem;font-size:0.75rem;color:var(--danger)" title="Revoke Access">
+                <i class="fas fa-ban"></i> Revoke
+              </button>
+            ` : `
+              <button onclick="toggleUserApproval('${encodeURIComponent(u.email)}', 'approved')" class="btn btn-sm btn-primary" style="padding:0.375rem 0.625rem;font-size:0.75rem" title="Approve Access">
+                <i class="fas fa-check"></i> Approve
+              </button>
+            `}
+            <button onclick="deleteUserRecord('${encodeURIComponent(u.email)}')" class="btn btn-ghost btn-icon" style="color:var(--danger);padding:0.375rem" title="Delete User">
+              <i class="fas fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+const openAdminModal = () => {
+  if (!appState.isAdmin) {
+    showToast({ type: 'error', title: 'Access Denied', message: 'Only the administrator can access the Admin Panel.' });
+    return;
+  }
+  
+  toggleModal($('modal-admin'), true);
+  
+  if (db) {
+    if (adminUnsubscribe) adminUnsubscribe();
+    adminUnsubscribe = db.collection('allowed_users').onSnapshot((snapshot) => {
+      allAdminUsers = [];
+      snapshot.forEach(doc => {
+        allAdminUsers.push(doc.data());
+      });
+
+      const total = allAdminUsers.length;
+      const approved = allAdminUsers.filter(u => u.status === 'approved').length;
+      const pending = allAdminUsers.filter(u => u.status === 'pending').length;
+
+      if ($('admin-stat-total')) $('admin-stat-total').textContent = total;
+      if ($('admin-stat-approved')) $('admin-stat-approved').textContent = approved;
+      if ($('admin-stat-pending')) $('admin-stat-pending').textContent = pending;
+
+      renderAdminUsersList($('admin-search-users')?.value || '');
+    }, (error) => {
+      console.error('Error listening to users:', error);
+    });
+  }
+};
+
+window.toggleUserApproval = async (docId, newStatus) => {
+  if (!db || !appState.isAdmin) return;
+  try {
+    await db.collection('allowed_users').doc(docId).update({
+      status: newStatus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast({
+      type: 'success',
+      title: newStatus === 'approved' ? 'Access Granted' : 'Access Revoked',
+      message: `User status updated to ${newStatus}.`
+    });
+  } catch (e) {
+    console.error('Error updating approval:', e);
+    showToast({ type: 'error', title: 'Update Failed', message: e.message });
+  }
+};
+
+window.deleteUserRecord = async (docId) => {
+  if (!db || !appState.isAdmin) return;
+  const decodedEmail = decodeURIComponent(docId);
+  if (confirm(`Remove access record for ${decodedEmail}?`)) {
+    try {
+      await db.collection('allowed_users').doc(docId).delete();
+      showToast({ type: 'info', title: 'User Removed', message: `Removed ${decodedEmail}.` });
+    } catch (e) {
+      console.error('Error deleting record:', e);
+      showToast({ type: 'error', title: 'Delete Failed', message: e.message });
+    }
+  }
+};
+
+const handleAddUserByAdmin = async () => {
+  const input = $('admin-add-email');
+  if (!input) return;
+  const email = input.value.toLowerCase().trim();
+  if (!email || !email.includes('@')) {
+    showToast({ type: 'warning', title: 'Invalid Email', message: 'Please enter a valid student email address.' });
+    return;
+  }
+
+  if (!db || !appState.isAdmin) return;
+
+  const docId = encodeURIComponent(email);
+  try {
+    await db.collection('allowed_users').doc(docId).set({
+      email: email,
+      displayName: email.split('@')[0],
+      photoURL: '',
+      status: 'approved',
+      role: 'student',
+      approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    input.value = '';
+    showToast({ type: 'success', title: 'Access Granted', message: `Access granted for ${email}.` });
+  } catch (e) {
+    console.error('Error granting access:', e);
+    showToast({ type: 'error', title: 'Grant Access Failed', message: e.message });
   }
 };
 
@@ -1574,12 +1826,40 @@ const wireEvents = () => {
     toggleUserMenu();
   };
 
+  // Admin Panel triggers & actions
+  const adminBtn = $('btn-admin-panel');
+  if (adminBtn) adminBtn.onclick = () => {
+    toggleUserMenu();
+    openAdminModal();
+  };
+
+  const closeAdminBtn = $('btn-close-admin');
+  if (closeAdminBtn) closeAdminBtn.onclick = () => toggleModal($('modal-admin'), false);
+
+  const adminModal = $('modal-admin');
+  if (adminModal) adminModal.onclick = (e) => { if (e.target === adminModal) toggleModal(adminModal, false); };
+
+  const adminAddBtn = $('btn-admin-add-user');
+  if (adminAddBtn) adminAddBtn.onclick = handleAddUserByAdmin;
+
+  const adminSearchInput = $('admin-search-users');
+  if (adminSearchInput) adminSearchInput.oninput = (e) => renderAdminUsersList(e.target.value);
+
+  // Pending approval screen actions
+  const recheckBtn = $('btn-recheck-approval');
+  if (recheckBtn) recheckBtn.onclick = () => renderAuthUI();
+
+  const pendingSignoutBtn = $('btn-pending-signout');
+  if (pendingSignoutBtn) pendingSignoutBtn.onclick = signOut;
+
   // Brand home click
   const brandHome = $('brand-home');
   if (brandHome) brandHome.onclick = () => {
-    appState.quiz.isActive = false;
-    showScreen('screen-dashboard');
-    renderDashboard();
+    if (appState.user && appState.isApproved) {
+      appState.quiz.isActive = false;
+      showScreen('screen-dashboard');
+      renderDashboard();
+    }
   };
 };
 
@@ -1588,8 +1868,11 @@ const initApp = () => {
   initTheme();
   initFirebase();
 
-  // Auth state listener
+  // Auth state listener with persistence
   if (auth) {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .catch(e => console.warn('Auth persistence error:', e));
+
     auth.onAuthStateChanged(onAuthStateChange);
   } else {
     renderAuthUI();
@@ -1599,9 +1882,6 @@ const initApp = () => {
   renderDashboard();
   updateScoreDisplay();
   wireEvents();
-
-  // Show dashboard screen
-  showScreen('screen-dashboard');
 };
 
 // Boot on DOM ready

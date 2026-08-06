@@ -101,6 +101,10 @@
                     <!-- User Dropdown Menu -->
                     <div id="user-menu" class="user-menu">
                         <div style="padding:0.5rem 0.75rem;font-size:0.6875rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em">Account</div>
+                        <button class="user-menu-item hidden" id="btn-admin-panel">
+                            <i class="fas fa-user-shield" style="width:1rem;text-align:center;color:var(--blue-500)"></i>
+                            <span>Admin Panel</span>
+                        </button>
                         <button class="user-menu-item" id="btn-sign-out">
                             <i class="fas fa-right-from-bracket" style="width:1rem;text-align:center;color:var(--danger)"></i>
                             <span>Sign Out</span>
@@ -171,6 +175,37 @@
                             <i class="fas fa-trophy" style="color:var(--warning);font-size:0.875rem"></i>
                             <span>Compete on the global student leaderboard</span>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN: ACCESS PENDING APPROVAL ==================== -->
+        <div id="screen-pending-approval" class="screen">
+            <div style="min-height:65vh;display:flex;align-items:center;justify-content:center;padding:0.5rem">
+                <div class="card" style="max-width:28rem;width:100%;padding:2.5rem 1.75rem;text-align:center;box-shadow:var(--shadow-xl);background:var(--surface-primary);border:1px solid var(--border-default)">
+                    <div style="width:4.5rem;height:4.5rem;border-radius:var(--radius-2xl);background:rgba(245,158,11,0.15);color:var(--warning);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.75rem">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h1 style="font-size:1.375rem;font-weight:900;color:var(--text-primary);margin-bottom:0.5rem">Access Pending Approval</h1>
+                    <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem">
+                        Your Google account <strong id="pending-user-email" style="color:var(--blue-500)"></strong> is registered. Access to Universal Reviewer is restricted and requires administrator approval.
+                    </p>
+                    <div style="padding:0.875rem;background:var(--surface-secondary);border-radius:var(--radius-xl);margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem">
+                        <i class="fas fa-user-gear" style="color:var(--warning);font-size:1.25rem"></i>
+                        <div style="text-align:left;font-size:0.8125rem;color:var(--text-secondary)">
+                            Admin Contact: <strong style="color:var(--text-primary)">jayfullsnackdev@gmail.com</strong>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem">
+                        <button id="btn-recheck-approval" class="btn btn-primary" style="flex:1;gap:0.5rem">
+                            <i class="fas fa-rotate"></i>
+                            <span>Check Status</span>
+                        </button>
+                        <button id="btn-pending-signout" class="btn btn-secondary" style="gap:0.5rem">
+                            <i class="fas fa-right-from-bracket"></i>
+                            <span>Sign Out</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -518,6 +553,66 @@
             <!-- Leaderboard List -->
             <div id="leaderboard-list" style="display:flex;flex-direction:column;gap:0.25rem;max-height:28rem;overflow-y:auto" class="custom-scroll">
                 <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: ADMIN CONTROL PANEL ===== -->
+    <div id="modal-admin" class="modal-overlay hidden">
+        <div class="modal-panel" style="max-width:44rem;width:95%">
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:0.625rem">
+                    <div style="width:2.25rem;height:2.25rem;border-radius:var(--radius-lg);background:rgba(59,130,246,0.15);color:var(--blue-500);display:flex;align-items:center;justify-content:center;font-size:1rem">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size:1.125rem;font-weight:700">Admin Control Panel</h2>
+                        <p style="font-size:0.75rem;color:var(--text-secondary)">Manage user email access and approvals</p>
+                    </div>
+                </div>
+                <button class="modal-close" id="btn-close-admin">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:1.25rem">
+                <!-- Stat Cards -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem">
+                    <div class="card" style="padding:0.875rem;text-align:center;background:var(--surface-secondary)">
+                        <div style="font-size:0.75rem;color:var(--text-secondary);font-weight:600">Total Registered</div>
+                        <div id="admin-stat-total" style="font-size:1.5rem;font-weight:800;color:var(--text-primary)">0</div>
+                    </div>
+                    <div class="card" style="padding:0.875rem;text-align:center;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2)">
+                        <div style="font-size:0.75rem;color:var(--success);font-weight:600">Approved</div>
+                        <div id="admin-stat-approved" style="font-size:1.5rem;font-weight:800;color:var(--success)">0</div>
+                    </div>
+                    <div class="card" style="padding:0.875rem;text-align:center;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2)">
+                        <div style="font-size:0.75rem;color:var(--warning);font-weight:600">Pending Approval</div>
+                        <div id="admin-stat-pending" style="font-size:1.5rem;font-weight:800;color:var(--warning)">0</div>
+                    </div>
+                </div>
+
+                <!-- Add Email / Quick Grant Access Form -->
+                <div class="card" style="padding:1rem;background:var(--surface-secondary);display:flex;flex-direction:column;gap:0.75rem">
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em">
+                        <i class="fas fa-user-plus" style="margin-right:0.25rem"></i> Grant Access to Email
+                    </label>
+                    <div style="display:flex;gap:0.5rem">
+                        <input type="email" id="admin-add-email" class="input" placeholder="student@gmail.com" style="flex:1">
+                        <button id="btn-admin-add-user" class="btn btn-primary" style="white-space:nowrap;gap:0.375rem">
+                            <i class="fas fa-check"></i> Grant Access
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Users List Header & Search -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+                    <h3 style="font-size:0.875rem;font-weight:700">User Access List</h3>
+                    <input type="text" id="admin-search-users" class="input" placeholder="Search name or email..." style="max-width:14rem;padding:0.375rem 0.75rem;font-size:0.8125rem">
+                </div>
+
+                <!-- Users List Table / Cards -->
+                <div id="admin-users-list" style="display:flex;flex-direction:column;gap:0.625rem;max-height:20rem;overflow-y:auto;padding-right:0.25rem" class="custom-scroll">
+                    <!-- Populated dynamically by JS -->
+                </div>
             </div>
         </div>
     </div>
