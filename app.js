@@ -1786,30 +1786,30 @@ const wireEvents = () => {
   const createNowBtn = $('btn-create-now');
   if (createNowBtn) createNowBtn.onclick = handleCreateNow;
 
-  // Create modal: Tab switching (Upload vs Paste)
+  // Create modal: Tab switching (Paste Notes [1st] vs Upload Files [2nd])
   const createTabUpload = $('create-tab-upload');
   const createTabPaste = $('create-tab-paste');
   const createUploadSection = $('create-upload-section');
   const createPasteSection = $('create-paste-section');
 
   if (createTabUpload && createTabPaste && createUploadSection && createPasteSection) {
-    createTabUpload.onclick = () => {
-      createTabUpload.className = 'btn btn-sm btn-primary';
-      createTabUpload.style.color = '';
-      createTabPaste.className = 'btn btn-sm btn-ghost';
-      createTabPaste.style.color = 'var(--text-secondary)';
-      createUploadSection.classList.remove('hidden');
-      createPasteSection.classList.add('hidden');
-    };
-
     createTabPaste.onclick = () => {
-      createTabPaste.className = 'btn btn-sm btn-primary';
+      createTabPaste.className = 'btn btn-sm btn-primary create-tab-btn';
       createTabPaste.style.color = '';
-      createTabUpload.className = 'btn btn-sm btn-ghost';
+      createTabUpload.className = 'btn btn-sm btn-ghost create-tab-btn';
       createTabUpload.style.color = 'var(--text-secondary)';
       createPasteSection.classList.remove('hidden');
       createUploadSection.classList.add('hidden');
       if ($('create-paste-input')) $('create-paste-input').focus();
+    };
+
+    createTabUpload.onclick = () => {
+      createTabUpload.className = 'btn btn-sm btn-primary create-tab-btn';
+      createTabUpload.style.color = '';
+      createTabPaste.className = 'btn btn-sm btn-ghost create-tab-btn';
+      createTabPaste.style.color = 'var(--text-secondary)';
+      createUploadSection.classList.remove('hidden');
+      createPasteSection.classList.add('hidden');
     };
   }
 

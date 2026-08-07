@@ -381,9 +381,9 @@
                 <button id="btn-close-create" class="btn btn-ghost btn-icon" title="Close"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <div class="modal-body custom-scroll" style="padding:1.5rem;overflow-y:auto;max-height:calc(90vh - 4.5rem)">
+            <div class="modal-body custom-scroll" style="padding:1rem 0.75rem;overflow-y:auto;max-height:calc(90vh - 4.5rem)">
                 <!-- Step 1: Reviewer Name -->
-                <div class="card" style="padding:1.25rem;margin-bottom:1.25rem;background:rgba(59,130,246,0.03);border-color:rgba(59,130,246,0.15)">
+                <div class="card" style="padding:0.875rem 0.75rem;margin-bottom:1rem;background:rgba(59,130,246,0.03);border-color:rgba(59,130,246,0.15)">
                     <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
                         <i class="fas fa-tag" style="color:var(--blue-500);margin-right:0.25rem"></i> Reviewer Name
                     </label>
@@ -392,16 +392,26 @@
 
                 <!-- Step 2: Mode Tabs -->
                 <div class="create-mode-tabs">
-                    <button id="create-tab-upload" class="btn btn-sm btn-primary create-tab-btn">
-                        <i class="fas fa-cloud-arrow-up"></i> <span>Upload Files &amp; Images</span>
+                    <button id="create-tab-paste" class="btn btn-sm btn-primary create-tab-btn">
+                        <i class="fas fa-paste"></i> <span>Paste Notes</span>
                     </button>
-                    <button id="create-tab-paste" class="btn btn-sm btn-ghost create-tab-btn">
-                        <i class="fas fa-paste"></i> <span>Paste Notes &amp; Text</span>
+                    <button id="create-tab-upload" class="btn btn-sm btn-ghost create-tab-btn" style="color:var(--text-secondary)">
+                        <i class="fas fa-cloud-arrow-up"></i> <span>Upload Files</span>
                     </button>
                 </div>
 
-                <!-- Upload Section -->
-                <div id="create-upload-section" class="card" style="padding:1.25rem;margin-bottom:1.25rem">
+                <!-- Paste Section (1st Tab) -->
+                <div id="create-paste-section" class="card" style="padding:0.875rem 0.75rem;margin-bottom:1rem;background:rgba(59,130,246,0.02)">
+                    <div style="margin-bottom:0.75rem">
+                        <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
+                            <i class="fas fa-clipboard-list" style="color:var(--blue-500);margin-right:0.25rem"></i> Paste Study Notes / Text:
+                        </label>
+                        <textarea id="create-paste-input" class="textarea custom-scroll" rows="8" placeholder="Paste your study notes, definitions, chapter summaries, Q&A, or raw text here...&#10;&#10;Examples:&#10;Motherboard: The main printed circuit board connecting all components.&#10;CPU - Central Processing Unit that executes instructions.&#10;Q: What is RAM? A: Volatile short-term memory." style="width:100%;box-sizing:border-box;font-size:0.8125rem;line-height:1.5;resize:vertical"></textarea>
+                    </div>
+                </div>
+
+                <!-- Upload Section (2nd Tab) -->
+                <div id="create-upload-section" class="card hidden" style="padding:0.875rem 0.75rem;margin-bottom:1rem">
                     <div id="drop-zone" class="dropzone">
                         <div class="dropzone-icon">
                             <i class="fas fa-file-arrow-up"></i>
@@ -422,16 +432,6 @@
                         <div class="progress-track">
                             <div id="ocr-progress-bar" class="progress-fill" style="width:0%"></div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Paste Section -->
-                <div id="create-paste-section" class="card hidden" style="padding:1.25rem;margin-bottom:1.25rem;background:rgba(59,130,246,0.02)">
-                    <div style="margin-bottom:0.75rem">
-                        <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
-                            <i class="fas fa-clipboard-list" style="color:var(--blue-500);margin-right:0.25rem"></i> Paste Study Notes / Text:
-                        </label>
-                        <textarea id="create-paste-input" class="textarea custom-scroll" rows="8" placeholder="Paste your study notes, definitions, chapter summaries, Q&A, or raw text here...&#10;&#10;Examples:&#10;Motherboard: The main printed circuit board connecting all components.&#10;CPU - Central Processing Unit that executes instructions.&#10;Q: What is RAM? A: Volatile short-term memory." style="width:100%;box-sizing:border-box;font-size:0.8125rem;line-height:1.5;resize:vertical"></textarea>
                     </div>
                 </div>
 
