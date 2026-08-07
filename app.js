@@ -1465,7 +1465,22 @@ const fetchLeaderboard = async () => {
   }
 };
 
-// ======================== UI RENDERING ========================
+// --- Gear Icon State ---
+const updateGearState = () => {
+  const hasReviewers = appState.reviewers && appState.reviewers.length > 0;
+  const gearBtn = $('btn-manage-gear');
+  const gearBtnMobile = $('btn-manage-gear-mobile');
+
+  [gearBtn, gearBtnMobile].forEach(btn => {
+    if (btn) {
+      btn.disabled = !hasReviewers;
+      btn.style.opacity = hasReviewers ? '1' : '0.4';
+      btn.style.cursor = hasReviewers ? 'pointer' : 'not-allowed';
+      btn.setAttribute('aria-disabled', !hasReviewers ? 'true' : 'false');
+      btn.title = hasReviewers ? 'Manage Reviewers' : 'No reviewers created yet';
+    }
+  });
+};
 
 // --- Dashboard ---
 const renderDashboard = () => {
@@ -1478,6 +1493,9 @@ const renderDashboard = () => {
   const reviewBtn = $('btn-review-now');
 
   const hasReviewers = appState.reviewers.length > 0;
+
+  // Update gear icons state
+  updateGearState();
 
   // Show/hide conditional states
   if (emptyState) emptyState.classList.toggle('hidden', hasReviewers);
@@ -1558,9 +1576,8 @@ const handleCreateNow = () => {
 // ======================== MANAGE REVIEWER MODAL ========================
 
 const openManageModal = () => {
-  if (appState.reviewers.length === 0) {
-    // No reviewers — open create modal instead
-    toggleModal($('modal-create-reviewer'), true);
+  if (!appState.reviewers || appState.reviewers.length === 0) {
+    showToast({ type: 'warning', title: 'No Reviewers', message: 'Create a reviewer first to enable management.' });
     return;
   }
   renderManageModal();
@@ -2032,8 +2049,66 @@ const wireEvents = () => {
   };
 };
 
+// ======================== PASSCODE GATE ========================
+const VALID_PASSCODES = ['!kiss', '!jay'];
+const PASSCODE_STORAGE_KEY = 'ur_passcode_unlocked';
+
+const initPasscodeGate = () => {
+  const gateModal = $('modal-passcode-gate');
+  if (!gateModal) return;
+
+  const isUnlocked = sessionStorage.getItem(PASSCODE_STORAGE_KEY) === 'true';
+  if (isUnlocked) {
+    gateModal.classList.add('hidden');
+    return;
+  }
+
+  gateModal.classList.remove('hidden');
+
+  const passcodeForm = $('passcode-form');
+  const passcodeInput = $('passcode-input');
+  const passcodeError = $('passcode-error');
+  const passcodeCard = gateModal.querySelector('.passcode-gate-card');
+
+  const handlePasscodeAttempt = () => {
+    if (!passcodeInput) return;
+    const inputVal = passcodeInput.value.trim();
+
+    if (VALID_PASSCODES.includes(inputVal)) {
+      sessionStorage.setItem(PASSCODE_STORAGE_KEY, 'true');
+      if (passcodeError) passcodeError.classList.add('hidden');
+      gateModal.classList.add('hidden');
+      showToast({ type: 'success', title: 'Welcome!', message: 'App unlocked successfully.' });
+    } else {
+      if (passcodeError) passcodeError.classList.remove('hidden');
+      if (passcodeCard) {
+        passcodeCard.classList.remove('shake-error');
+        void passcodeCard.offsetWidth; // force reflow
+        passcodeCard.classList.add('shake-error');
+      }
+      passcodeInput.value = '';
+      passcodeInput.focus();
+    }
+  };
+
+  if (passcodeForm) {
+    passcodeForm.onsubmit = (e) => {
+      e.preventDefault();
+      handlePasscodeAttempt();
+    };
+  }
+
+  const submitBtn = $('btn-passcode-submit');
+  if (submitBtn) submitBtn.onclick = handlePasscodeAttempt;
+
+  setTimeout(() => {
+    if (passcodeInput && !isUnlocked) passcodeInput.focus();
+  }, 200);
+};
+
 // ======================== APP INITIALIZATION ========================
 const initApp = () => {
+  initPasscodeGate();
   initTheme();
   initFirebase();
 
