@@ -76,6 +76,11 @@
                     <i class="fas fa-chart-simple"></i>
                 </button>
 
+                <!-- Manage Reviewers Gear Button (Desktop) -->
+                <button class="btn btn-ghost btn-icon btn-stats-desktop" id="btn-manage-gear" title="Manage Reviewers">
+                    <i class="fas fa-gear"></i>
+                </button>
+
                 <!-- Leaderboard Button (Desktop) -->
                 <button class="btn btn-ghost btn-icon btn-lb-desktop" id="btn-leaderboard" title="Leaderboard">
                     <i class="fas fa-trophy"></i>
@@ -133,6 +138,9 @@
             <div class="mobile-nav-divider"></div>
             <button class="mobile-action-btn" id="btn-stats-mobile" title="Session Stats">
                 <i class="fas fa-chart-simple"></i>
+            </button>
+            <button class="mobile-action-btn" id="btn-manage-gear-mobile" title="Manage Reviewers">
+                <i class="fas fa-gear"></i>
             </button>
             <button class="mobile-action-btn" id="btn-leaderboard-mobile" title="Leaderboard">
                 <i class="fas fa-trophy" style="color:var(--warning)"></i>
@@ -211,49 +219,63 @@
 
         <!-- ==================== SCREEN: DASHBOARD ==================== -->
         <div id="screen-dashboard" class="screen">
-            <!-- Reviewer Selector -->
-            <div style="margin-bottom:1.25rem">
-                <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.375rem;display:block">
-                    <i class="fas fa-bookmark" style="margin-right:0.25rem"></i> Active Reviewer
-                </label>
-                <select id="reviewer-select" class="select">
-                    <option value="">No Reviewers Available</option>
-                </select>
+            <!-- Empty State: No Reviewers CTA -->
+            <div id="dashboard-empty-state" class="hidden">
+                <div class="card" style="padding:3rem 1.75rem;margin-bottom:1.25rem;text-align:center">
+                    <img src="assets/logo.png" alt="Universal Reviewer Logo" style="width:5rem;height:5rem;border-radius:50%;object-fit:cover;margin:0 auto 1.25rem;border:none">
+                    <h1 style="font-size:1.375rem;font-weight:800;color:var(--text-primary);margin-bottom:0.5rem">Get Started!</h1>
+                    <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;max-width:24rem;margin:0 auto 1.75rem">
+                        Create your first reviewer by uploading notes, pasting text, or adding terms manually.
+                    </p>
+                    <button id="btn-create-reviewer-cta" class="btn btn-primary" style="padding:0.875rem 2rem;font-size:1rem;font-weight:700;gap:0.625rem">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Create Reviewer</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Dashboard Card -->
-            <div class="card" style="padding:2rem 1.75rem;margin-bottom:1.25rem">
-                <!-- Reviewer Info -->
-                <div style="text-align:center;margin-bottom:1.5rem">
-                    <img src="assets/logo.png" alt="Universal Reviewer Logo" style="width:4.5rem;height:4.5rem;border-radius:50%;object-fit:cover;margin:0 auto 1rem;border:none">
-                    <h1 id="dashboard-reviewer-name" style="font-size:1.375rem;font-weight:800;color:var(--text-primary);margin-bottom:0.375rem">No Reviewer Selected</h1>
-                    <p id="dashboard-reviewer-desc" style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.5;max-width:28rem;margin:0 auto">
-                        Create a new reviewer by uploading documents or adding terms manually.
-                    </p>
+            <!-- Active State: Has Reviewers -->
+            <div id="dashboard-active-state" class="hidden">
+                <!-- Reviewer Selector -->
+                <div style="margin-bottom:1.25rem">
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.375rem;display:block">
+                        <i class="fas fa-bookmark" style="margin-right:0.25rem"></i> Active Reviewer
+                    </label>
+                    <select id="reviewer-select" class="select">
+                        <option value="">No Reviewers Available</option>
+                    </select>
                 </div>
 
-                <!-- Term Count Badge -->
-                <div style="display:flex;justify-content:center;margin-bottom:1.5rem">
-                    <div class="badge badge-blue" style="font-size:0.8125rem;padding:0.375rem 1rem">
-                        <i class="fas fa-layer-group"></i>
-                        <span id="dashboard-term-count">0 Terms</span>
+                <!-- Dashboard Card -->
+                <div class="card" style="padding:2rem 1.75rem;margin-bottom:1.25rem">
+                    <!-- Reviewer Info -->
+                    <div style="text-align:center;margin-bottom:1.5rem">
+                        <img src="assets/logo.png" alt="Universal Reviewer Logo" style="width:4.5rem;height:4.5rem;border-radius:50%;object-fit:cover;margin:0 auto 1rem;border:none">
+                        <h1 id="dashboard-reviewer-name" style="font-size:1.375rem;font-weight:800;color:var(--text-primary);margin-bottom:0.375rem">No Reviewer Selected</h1>
+                        <p id="dashboard-reviewer-desc" style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.5;max-width:28rem;margin:0 auto">
+                            Upload documents or add terms manually to build your reviewer.
+                        </p>
+                    </div>
+
+                    <!-- Term Count Badge -->
+                    <div style="display:flex;justify-content:center;margin-bottom:1.5rem">
+                        <div class="badge badge-blue" style="font-size:0.8125rem;padding:0.375rem 1rem">
+                            <i class="fas fa-layer-group"></i>
+                            <span id="dashboard-term-count">0 Terms</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="dashboard-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                        <button id="btn-review-now" class="btn btn-primary" style="flex:1" disabled>
+                            <i class="fas fa-play"></i>
+                            <span>Review Now</span>
+                        </button>
                     </div>
                 </div>
-
-                <!-- Action Buttons -->
-                <div class="dashboard-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap">
-                    <button id="btn-review-now" class="btn btn-primary" style="flex:1" disabled>
-                        <i class="fas fa-play"></i>
-                        <span>Review Now</span>
-                    </button>
-                    <button id="btn-manage-reviewers" class="btn btn-secondary" style="flex:1">
-                        <i class="fas fa-folder-open"></i>
-                        <span>Manage & Upload</span>
-                    </button>
-                </div>
             </div>
 
-            <!-- Quick Tips Card -->
+            <!-- Quick Tips Card (always visible) -->
             <div class="card" style="padding:1.25rem 1.5rem">
                 <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
                     <i class="fas fa-lightbulb" style="color:var(--blue-500)"></i>
@@ -344,55 +366,42 @@
     <!-- ===== TOAST NOTIFICATION CONTAINER ===== -->
     <div id="toast-container" class="toast-stack"></div>
 
-    <!-- ===== MODAL: REVIEWER MANAGER ===== -->
-    <div id="modal-manager" class="modal-overlay hidden">
+    <!-- ===== MODAL: CREATE REVIEWER ===== -->
+    <div id="modal-create-reviewer" class="modal-overlay hidden">
         <div class="modal-panel" style="max-width:42rem">
             <!-- Header -->
             <div class="modal-header">
                 <div>
                     <h2 style="font-size:1.125rem;font-weight:800;color:var(--text-primary)">
-                        <i class="fas fa-folder-open" style="color:var(--blue-500);margin-right:0.5rem"></i>
-                        Reviewer Manager
+                        <i class="fas fa-plus-circle" style="color:var(--blue-500);margin-right:0.5rem"></i>
+                        Create Reviewer
                     </h2>
-                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.125rem">Create, upload documents, or paste notes to generate reviewers</p>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.125rem">Name your reviewer, then upload files or paste notes to get started</p>
                 </div>
-                <button id="btn-close-manager" class="btn btn-ghost btn-icon" title="Close"><i class="fas fa-xmark"></i></button>
+                <button id="btn-close-create" class="btn btn-ghost btn-icon" title="Close"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- Scrollable Body Container (Prevents scrollbar overflow past rounded corners) -->
             <div class="modal-body custom-scroll" style="padding:1.5rem;overflow-y:auto;max-height:calc(90vh - 4.5rem)">
-                <!-- Create New Reviewer Section -->
+                <!-- Step 1: Reviewer Name -->
                 <div class="card" style="padding:1.25rem;margin-bottom:1.25rem;background:rgba(59,130,246,0.03);border-color:rgba(59,130,246,0.15)">
-                    <div style="font-weight:700;font-size:0.8125rem;color:var(--text-primary);margin-bottom:0.625rem">
-                        <i class="fas fa-plus-circle" style="color:var(--blue-500);margin-right:0.375rem"></i>
-                        Create New Reviewer
-                    </div>
-                    <div style="display:flex;gap:0.5rem">
-                        <input type="text" id="reviewer-name-input" class="input" placeholder="e.g. General Chemistry - Midterms" style="flex:1">
-                        <button id="btn-create-reviewer" class="btn btn-primary btn-sm">Create</button>
-                    </div>
+                    <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
+                        <i class="fas fa-tag" style="color:var(--blue-500);margin-right:0.25rem"></i> Reviewer Name
+                    </label>
+                    <input type="text" id="create-reviewer-name" class="input" placeholder="e.g. General Chemistry - Midterms">
                 </div>
 
-                <!-- Mode Tabs: Upload vs Paste -->
+                <!-- Step 2: Mode Tabs -->
                 <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;padding:0.25rem;background:var(--surface-secondary);border-radius:var(--radius-xl);border:1px solid var(--border-default)">
-                    <button id="tab-btn-upload" class="btn btn-sm btn-primary" style="flex:1;gap:0.375rem">
+                    <button id="create-tab-upload" class="btn btn-sm btn-primary" style="flex:1;gap:0.375rem">
                         <i class="fas fa-cloud-arrow-up"></i> Upload Files & Images
                     </button>
-                    <button id="tab-btn-paste" class="btn btn-sm btn-ghost" style="flex:1;gap:0.375rem;color:var(--text-secondary)">
+                    <button id="create-tab-paste" class="btn btn-sm btn-ghost" style="flex:1;gap:0.375rem;color:var(--text-secondary)">
                         <i class="fas fa-paste"></i> Paste Notes & Text
                     </button>
                 </div>
 
-                <!-- Section 1: Upload Files & Images -->
-                <div id="manager-upload-section" class="card" style="padding:1.25rem;margin-bottom:1.25rem">
-                    <div style="margin-bottom:0.75rem">
-                        <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.04em">Save to Reviewer:</label>
-                        <select id="upload-target-reviewer" class="select" style="font-size:0.8125rem">
-                            <option value="__new__">➕ Create New Reviewer</option>
-                        </select>
-                    </div>
-
-                    <!-- Drop Zone -->
+                <!-- Upload Section -->
+                <div id="create-upload-section" class="card" style="padding:1.25rem;margin-bottom:1.25rem">
                     <div id="drop-zone" class="dropzone">
                         <div class="dropzone-icon">
                             <i class="fas fa-file-arrow-up"></i>
@@ -416,60 +425,100 @@
                     </div>
                 </div>
 
-                <!-- Section 2: Paste Notes & Text -->
-                <div id="manager-paste-section" class="card hidden" style="padding:1.25rem;margin-bottom:1.25rem;background:rgba(59,130,246,0.02)">
-                    <div style="margin-bottom:0.75rem">
-                        <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.04em">Save to Reviewer:</label>
-                        <select id="paste-target-reviewer" class="select" style="font-size:0.8125rem">
-                            <option value="__new__">➕ Create New Reviewer</option>
-                        </select>
-                    </div>
-
+                <!-- Paste Section -->
+                <div id="create-paste-section" class="card hidden" style="padding:1.25rem;margin-bottom:1.25rem;background:rgba(59,130,246,0.02)">
                     <div style="margin-bottom:0.75rem">
                         <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
                             <i class="fas fa-clipboard-list" style="color:var(--blue-500);margin-right:0.25rem"></i> Paste Study Notes / Text:
                         </label>
-                        <textarea id="paste-notes-input" class="textarea custom-scroll" rows="8" placeholder="Paste your study notes, definitions, chapter summaries, Q&A, or raw text here...&#10;&#10;Examples:&#10;Motherboard: The main printed circuit board connecting all components.&#10;CPU - Central Processing Unit that executes instructions.&#10;Q: What is RAM? A: Volatile short-term memory." style="width:100%;box-sizing:border-box;font-size:0.8125rem;line-height:1.5;resize:vertical"></textarea>
+                        <textarea id="create-paste-input" class="textarea custom-scroll" rows="8" placeholder="Paste your study notes, definitions, chapter summaries, Q&A, or raw text here...&#10;&#10;Examples:&#10;Motherboard: The main printed circuit board connecting all components.&#10;CPU - Central Processing Unit that executes instructions.&#10;Q: What is RAM? A: Volatile short-term memory." style="width:100%;box-sizing:border-box;font-size:0.8125rem;line-height:1.5;resize:vertical"></textarea>
                     </div>
+                </div>
 
-                    <button id="btn-process-pasted-text" class="btn btn-primary" style="width:100%;gap:0.5rem">
-                        <i class="fas fa-wand-magic-sparkles"></i>
-                        <span>Scan Notes & Generate Questions</span>
+                <!-- Create Now Button -->
+                <button id="btn-create-now" class="btn btn-primary" style="width:100%;padding:0.875rem;font-size:0.9375rem;font-weight:700;gap:0.5rem">
+                    <i class="fas fa-rocket"></i>
+                    <span>Create Now</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: MANAGE REVIEWER ===== -->
+    <div id="modal-manage-reviewer" class="modal-overlay hidden">
+        <div class="modal-panel" style="max-width:42rem">
+            <!-- Header -->
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size:1.125rem;font-weight:800;color:var(--text-primary)">
+                        <i class="fas fa-gear" style="color:var(--blue-500);margin-right:0.5rem"></i>
+                        Manage Reviewers
+                    </h2>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.125rem">Edit, save, or delete your reviewers</p>
+                </div>
+                <button id="btn-close-manage" class="btn btn-ghost btn-icon" title="Close"><i class="fas fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-body custom-scroll" style="padding:1.5rem;overflow-y:auto;max-height:calc(90vh - 4.5rem)">
+                <!-- Reviewer Selector -->
+                <div style="margin-bottom:1.25rem">
+                    <label style="font-size:0.6875rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">
+                        <i class="fas fa-bookmark" style="color:var(--blue-500);margin-right:0.25rem"></i> Select Reviewer to Manage:
+                    </label>
+                    <select id="manage-reviewer-select" class="select" style="font-size:0.8125rem">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <!-- Action Buttons Row -->
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem">
+                    <button id="btn-edit-reviewer" class="btn btn-primary btn-sm" style="flex:1;gap:0.375rem">
+                        <i class="fas fa-pen-to-square"></i>
+                        <span>Edit This Reviewer</span>
+                    </button>
+                    <button id="btn-delete-reviewer" class="btn btn-sm" style="gap:0.375rem;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.25)">
+                        <i class="fas fa-trash"></i>
+                        <span>Delete</span>
                     </button>
                 </div>
 
-                <!-- Existing Reviewers List -->
+                <!-- Create New Reviewer (inside manage) -->
                 <div style="margin-bottom:1.25rem">
-                    <div style="font-weight:700;font-size:0.8125rem;color:var(--text-primary);margin-bottom:0.625rem">
-                        <i class="fas fa-list" style="color:var(--blue-500);margin-right:0.375rem"></i>
-                        Your Reviewers
-                    </div>
-                    <div id="manager-reviewer-list" style="display:flex;flex-direction:column;gap:0.5rem">
-                        <!-- Rendered by JS -->
-                    </div>
+                    <button id="btn-create-from-manage" class="btn btn-secondary" style="width:100%;gap:0.5rem">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Create New Reviewer</span>
+                    </button>
                 </div>
 
                 <!-- Terms Editor Section -->
-                <div id="terms-editor-section" class="hidden">
+                <div id="manage-terms-editor" class="hidden">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.625rem">
                         <div style="font-weight:700;font-size:0.8125rem;color:var(--text-primary)">
                             <i class="fas fa-pen-to-square" style="color:var(--blue-500);margin-right:0.375rem"></i>
                             Terms & Definitions
-                            <span id="editor-term-count" class="badge badge-blue" style="margin-left:0.375rem">0</span>
+                            <span id="manage-term-count" class="badge badge-blue" style="margin-left:0.375rem">0</span>
                         </div>
-                        <button id="btn-add-term" class="btn btn-sm btn-secondary" style="gap:0.375rem">
+                        <button id="btn-manage-add-term" class="btn btn-sm btn-secondary" style="gap:0.375rem">
                             <i class="fas fa-plus" style="font-size:0.625rem"></i>
                             Add Term
                         </button>
                     </div>
-                    <div id="terms-editor-container" style="display:flex;flex-direction:column;gap:0.5rem;max-height:20rem;overflow-y:auto" class="custom-scroll">
+                    <div id="manage-terms-container" style="display:flex;flex-direction:column;gap:0.5rem;max-height:20rem;overflow-y:auto" class="custom-scroll">
                         <!-- Rendered by JS -->
+                    </div>
+
+                    <!-- Save Button -->
+                    <div style="margin-top:1rem">
+                        <button id="btn-save-reviewer" class="btn btn-primary" style="width:100%;gap:0.5rem">
+                            <i class="fas fa-floppy-disk"></i>
+                            <span>Save Changes</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Done Button -->
                 <div style="margin-top:1.5rem">
-                    <button id="btn-done-manager" class="btn btn-primary" style="width:100%">
+                    <button id="btn-done-manage" class="btn btn-secondary" style="width:100%">
                         <i class="fas fa-check"></i>
                         Done
                     </button>

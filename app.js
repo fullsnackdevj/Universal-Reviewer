@@ -641,7 +641,9 @@ const deleteReviewer = async (reviewerId) => {
   }
   saveReviewers();
   renderDashboard();
-  renderManagerContent();
+  if (appState.reviewers.length > 0) {
+    renderManageModal();
+  }
   showToast({ type: 'info', title: 'Reviewer Deleted', message: 'The reviewer has been removed.' });
 };
 
@@ -1061,23 +1063,16 @@ const parseTermsFromText = (text) => {
 
 // ======================== FILE UPLOAD PROCESSOR ========================
 const processUploadedFiles = async (files) => {
-  const reviewerNameInput = $('reviewer-name-input');
+  const reviewerNameInput = $('create-reviewer-name');
   let reviewerName = reviewerNameInput ? reviewerNameInput.value.trim() : '';
 
   // Find or create the reviewer
   let reviewer = null;
-  const targetSelect = $('upload-target-reviewer');
 
-  if (targetSelect && targetSelect.value && targetSelect.value !== '__new__') {
-    reviewer = appState.reviewers.find(r => r.id === targetSelect.value);
+  if (!reviewerName) {
+    reviewerName = `Reviewer ${appState.reviewers.length + 1}`;
   }
-
-  if (!reviewer) {
-    if (!reviewerName) {
-      reviewerName = `Reviewer ${appState.reviewers.length + 1}`;
-    }
-    reviewer = createReviewer(reviewerName);
-  }
+  reviewer = createReviewer(reviewerName);
 
   let totalNewItems = 0;
 
@@ -1101,7 +1096,9 @@ const processUploadedFiles = async (files) => {
   appState.activeReviewerId = reviewer.id;
   saveReviewers();
   renderDashboard();
-  renderManagerContent();
+
+  // Close create modal
+  toggleModal($('modal-create-reviewer'), false);
 
   if (totalNewItems > 0) {
     showToast({ type: 'success', title: 'Upload Complete!', message: `Added ${totalNewItems} terms to "${reviewer.name}".` });
@@ -1109,9 +1106,10 @@ const processUploadedFiles = async (files) => {
     showToast({ type: 'warning', title: 'No Terms Found', message: 'Could not extract study terms. Try uploading notes with clear Term: Definition format.' });
   }
 
-  // Reset file input
+  // Reset file input & name
   const fileInput = $('file-input');
   if (fileInput) fileInput.value = '';
+  if (reviewerNameInput) reviewerNameInput.value = '';
 };
 
 // ======================== QUESTION GENERATOR ========================
@@ -1472,31 +1470,32 @@ const fetchLeaderboard = async () => {
 
 // --- Dashboard ---
 const renderDashboard = () => {
-  const reviewer = getActiveReviewer();
+  const emptyState = $('dashboard-empty-state');
+  const activeState = $('dashboard-active-state');
   const dropdown = $('reviewer-select');
   const nameEl = $('dashboard-reviewer-name');
   const descEl = $('dashboard-reviewer-desc');
   const countEl = $('dashboard-term-count');
   const reviewBtn = $('btn-review-now');
 
+  const hasReviewers = appState.reviewers.length > 0;
+
+  // Show/hide conditional states
+  if (emptyState) emptyState.classList.toggle('hidden', hasReviewers);
+  if (activeState) activeState.classList.toggle('hidden', !hasReviewers);
+
+  if (!hasReviewers) return;
+
+  const reviewer = getActiveReviewer();
+
   // Populate dropdown
   if (dropdown) {
-    if (appState.reviewers.length === 0) {
-      dropdown.innerHTML = '<option value="">No Reviewers Available</option>';
-    } else {
-      dropdown.innerHTML = appState.reviewers.map(r =>
-        `<option value="${r.id}" ${r.id === appState.activeReviewerId ? 'selected' : ''}>${escapeHtml(r.name)} (${r.items.length})</option>`
-      ).join('');
-    }
+    dropdown.innerHTML = appState.reviewers.map(r =>
+      `<option value="${r.id}" ${r.id === appState.activeReviewerId ? 'selected' : ''}>${escapeHtml(r.name)} (${r.items.length})</option>`
+    ).join('');
   }
 
-  if (!reviewer) {
-    if (nameEl) nameEl.textContent = 'No Reviewer Selected';
-    if (descEl) descEl.textContent = 'Create a new reviewer by uploading documents or adding terms manually.';
-    if (countEl) countEl.textContent = '0 Terms';
-    if (reviewBtn) { reviewBtn.disabled = true; reviewBtn.classList.add('btn-disabled'); }
-    return;
-  }
+  if (!reviewer) return;
 
   if (nameEl) nameEl.textContent = reviewer.name;
   if (descEl) descEl.textContent = reviewer.description || 'Upload documents or add terms manually to build your reviewer.';
@@ -1505,137 +1504,95 @@ const renderDashboard = () => {
   const hasItems = reviewer.items.length > 0;
   if (reviewBtn) {
     reviewBtn.disabled = !hasItems;
-    if (hasItems) {
-      reviewBtn.className = 'btn btn-primary';
-      reviewBtn.style.flex = '1';
-    } else {
-      reviewBtn.className = 'btn btn-secondary';
-      reviewBtn.style.flex = '1';
-      reviewBtn.style.opacity = '0.5';
-      reviewBtn.style.cursor = 'not-allowed';
-    }
+    reviewBtn.style.opacity = hasItems ? '' : '0.5';
+    reviewBtn.style.cursor = hasItems ? '' : 'not-allowed';
+    reviewBtn.className = hasItems ? 'btn btn-primary' : 'btn btn-secondary';
+    reviewBtn.style.flex = '1';
   }
 };
 
-// --- Manager Modal Content ---
-const renderManagerContent = () => {
-  renderManagerReviewerList();
-  renderManagerTermsEditor();
-  updateUploadTargetDropdown();
-};
+// ======================== CREATE REVIEWER MODAL ========================
 
-const renderManagerReviewerList = () => {
-  const list = $('manager-reviewer-list');
-  if (!list) return;
+const handleCreateNow = () => {
+  const nameInput = $('create-reviewer-name');
+  const pasteInput = $('create-paste-input');
+  const name = nameInput ? nameInput.value.trim() : '';
 
-  if (appState.reviewers.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.8125rem">No reviewers created yet. Create one above!</div>';
+  if (!name) {
+    showToast({ type: 'warning', title: 'Name Required', message: 'Please enter a reviewer name.' });
+    if (nameInput) nameInput.focus();
     return;
   }
 
-  list.innerHTML = appState.reviewers.map(r => `
-    <div class="card" style="padding:0.875rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;${r.id === appState.activeReviewerId ? 'border-color:var(--blue-500);background:rgba(59,130,246,0.04)' : ''}">
-      <div style="min-width:0;flex:1">
-        <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary)" class="truncate">${escapeHtml(r.name)}</div>
-        <div style="font-size:0.6875rem;color:var(--text-muted)">${r.items.length} terms</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:0.375rem;flex-shrink:0">
-        <button class="btn btn-sm btn-primary" onclick="window._selectReviewer('${r.id}')">Select</button>
-        <button class="btn btn-sm btn-ghost" style="color:var(--danger)" onclick="window._deleteReviewer('${r.id}')"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>
-  `).join('');
-};
+  // Create the reviewer
+  const reviewer = createReviewer(name);
 
-const updateUploadTargetDropdown = () => {
-  const select = $('upload-target-reviewer');
-  const pasteSelect = $('paste-target-reviewer');
-
-  const optionsHtml = '<option value="__new__">➕ Create New Reviewer</option>' +
-    appState.reviewers.map(r =>
-      `<option value="${r.id}" ${r.id === appState.activeReviewerId ? 'selected' : ''}>${escapeHtml(r.name)}</option>`
-    ).join('');
-
-  if (select) select.innerHTML = optionsHtml;
-  if (pasteSelect) pasteSelect.innerHTML = optionsHtml;
-};
-
-const handleProcessPastedText = () => {
-  const textarea = $('paste-notes-input');
-  const text = textarea ? textarea.value.trim() : '';
-
-  if (!text) {
-    showToast({ type: 'warning', title: 'Empty Notes', message: 'Please paste your study notes or text into the field first.' });
-    return;
-  }
-
-  const targetSelect = $('paste-target-reviewer');
-  let reviewer = null;
-
-  if (targetSelect && targetSelect.value && targetSelect.value !== '__new__') {
-    reviewer = appState.reviewers.find(r => r.id === targetSelect.value);
-  }
-
-  if (!reviewer) {
-    const reviewerNameInput = $('reviewer-name-input');
-    let reviewerName = reviewerNameInput ? reviewerNameInput.value.trim() : '';
-    if (!reviewerName) {
-      const firstLine = text.split('\n')[0].replace(/^[#●○•\*\-\s\d\.\)\:]+/, '').trim();
-      reviewerName = (firstLine.length > 0 && firstLine.length <= 40) ? firstLine : `Pasted Notes (${new Date().toLocaleDateString()})`;
+  // Check if paste section has text
+  const pasteText = pasteInput ? pasteInput.value.trim() : '';
+  if (pasteText) {
+    const parsedItems = parseTermsFromText(pasteText);
+    if (parsedItems.length > 0) {
+      reviewer.items.push(...parsedItems);
+      reviewer.updatedAt = Date.now();
+      saveReviewers();
     }
-    reviewer = createReviewer(reviewerName);
   }
 
-  const parsedItems = parseTermsFromText(text);
+  // Reset form
+  if (nameInput) nameInput.value = '';
+  if (pasteInput) pasteInput.value = '';
 
-  if (parsedItems.length === 0) {
-    showToast({
-      type: 'error',
-      title: 'No Terms Detected',
-      message: 'Could not extract terms/definitions from the text. Make sure notes include terms and definitions separated by colons, dashes, or bullet points.'
-    });
-    return;
-  }
-
-  const existingMap = new Map();
-  reviewer.items.forEach(i => existingMap.set(i.term.toLowerCase(), i));
-  let addedCount = 0;
-
-  parsedItems.forEach(item => {
-    const key = item.term.toLowerCase();
-    if (!existingMap.has(key)) {
-      existingMap.set(key, item);
-      reviewer.items.push(item);
-      addedCount++;
-    }
-  });
-
-  reviewer.updatedAt = Date.now();
-  appState.activeReviewerId = reviewer.id;
-  saveReviewers();
-
-  if (textarea) textarea.value = '';
-
+  // Close modal & update UI
+  toggleModal($('modal-create-reviewer'), false);
   renderDashboard();
-  renderManagerContent();
 
-  toggleModal($('modal-manager'), false);
-
+  const termCount = reviewer.items.length;
   showToast({
     type: 'success',
-    title: 'Notes Scanned!',
-    message: `Extracted ${parsedItems.length} study items (${addedCount} new added) for "${reviewer.name}".`
+    title: 'Reviewer Created!',
+    message: termCount > 0
+      ? `"${name}" created with ${termCount} terms.`
+      : `"${name}" is ready. Add terms via the ⚙️ Manage panel.`
   });
 };
 
-const renderManagerTermsEditor = () => {
-  const editorSection = $('terms-editor-section');
-  const editorContainer = $('terms-editor-container');
-  const termCountEl = $('editor-term-count');
+// ======================== MANAGE REVIEWER MODAL ========================
 
-  if (!editorSection || !editorContainer) return;
+const openManageModal = () => {
+  if (appState.reviewers.length === 0) {
+    // No reviewers — open create modal instead
+    toggleModal($('modal-create-reviewer'), true);
+    return;
+  }
+  renderManageModal();
+  toggleModal($('modal-manage-reviewer'), true);
+};
 
-  const reviewer = getActiveReviewer();
+const renderManageModal = () => {
+  const dropdown = $('manage-reviewer-select');
+  const editorSection = $('manage-terms-editor');
+
+  if (dropdown) {
+    dropdown.innerHTML = appState.reviewers.map(r =>
+      `<option value="${r.id}" ${r.id === appState.activeReviewerId ? 'selected' : ''}>${escapeHtml(r.name)} (${r.items.length} terms)</option>`
+    ).join('');
+  }
+
+  // Hide terms editor until "Edit This Reviewer" is clicked
+  if (editorSection) editorSection.classList.add('hidden');
+};
+
+const renderManageTermsEditor = () => {
+  const editorSection = $('manage-terms-editor');
+  const editorContainer = $('manage-terms-container');
+  const termCountEl = $('manage-term-count');
+  const dropdown = $('manage-reviewer-select');
+
+  if (!editorSection || !editorContainer || !dropdown) return;
+
+  const reviewerId = dropdown.value;
+  const reviewer = appState.reviewers.find(r => r.id === reviewerId);
+
   if (!reviewer) {
     editorSection.classList.add('hidden');
     return;
@@ -1648,7 +1605,7 @@ const renderManagerTermsEditor = () => {
     <div class="card" style="padding:0.75rem;display:flex;gap:0.5rem;align-items:center">
       <input type="text" class="input" style="flex:1;font-weight:600;font-size:0.8125rem;padding:0.5rem 0.75rem;min-height:36px" value="${escapeHtml(item.term)}" onchange="window._updateTerm('${reviewer.id}',${idx},this.value)" placeholder="Term">
       <input type="text" class="input" style="flex:2;font-size:0.8125rem;padding:0.5rem 0.75rem;min-height:36px" value="${escapeHtml(item.def)}" onchange="window._updateDef('${reviewer.id}',${idx},this.value)" placeholder="Definition">
-      <button class="btn btn-ghost btn-icon" style="width:32px;height:32px;color:var(--danger);flex-shrink:0" onclick="window._removeItem('${reviewer.id}',${idx})"><i class="fas fa-times"></i></button>
+      <button class="btn btn-ghost btn-icon" style="width:32px;height:32px;color:var(--danger);flex-shrink:0" onclick="window._removeManageItem('${reviewer.id}',${idx})"><i class="fas fa-times"></i></button>
     </div>
   `).join('');
 };
@@ -1750,7 +1707,6 @@ window._selectReviewer = (id) => {
   appState.activeReviewerId = id;
   saveReviewers();
   renderDashboard();
-  renderManagerContent();
 };
 
 window._deleteReviewer = (id) => deleteReviewer(id);
@@ -1765,9 +1721,9 @@ window._updateDef = (reviewerId, idx, val) => {
   if (r && r.items[idx]) { r.items[idx].def = val; saveReviewers(); }
 };
 
-window._removeItem = (reviewerId, idx) => {
+window._removeManageItem = (reviewerId, idx) => {
   const r = appState.reviewers.find(r => r.id === reviewerId);
-  if (r) { r.items.splice(idx, 1); saveReviewers(); renderDashboard(); renderManagerTermsEditor(); }
+  if (r) { r.items.splice(idx, 1); saveReviewers(); renderDashboard(); renderManageTermsEditor(); }
 };
 
 // ======================== EVENT WIRING ========================
@@ -1776,7 +1732,7 @@ const wireEvents = () => {
   const themeBtn = $('btn-theme-toggle');
   if (themeBtn) themeBtn.onclick = toggleTheme;
 
-  // Reviewer dropdown change
+  // Reviewer dropdown change (dashboard)
   const dropdown = $('reviewer-select');
   if (dropdown) dropdown.onchange = (e) => {
     appState.activeReviewerId = e.target.value;
@@ -1796,56 +1752,52 @@ const wireEvents = () => {
     generateQuestion();
   };
 
-  // Upload / Manage button
-  const manageBtn = $('btn-manage-reviewers');
-  if (manageBtn) manageBtn.onclick = () => {
-    renderManagerContent();
-    toggleModal($('modal-manager'), true);
-  };
+  // ========== CREATE REVIEWER MODAL ==========
 
-  // Close manager modal
-  const closeManagerBtn = $('btn-close-manager');
-  if (closeManagerBtn) closeManagerBtn.onclick = () => toggleModal($('modal-manager'), false);
-  const doneManagerBtn = $('btn-done-manager');
-  if (doneManagerBtn) doneManagerBtn.onclick = () => toggleModal($('modal-manager'), false);
+  // Dashboard CTA: Create Reviewer button (empty state)
+  const createCta = $('btn-create-reviewer-cta');
+  if (createCta) createCta.onclick = () => toggleModal($('modal-create-reviewer'), true);
 
-  // Manager modal backdrop click
-  const managerModal = $('modal-manager');
-  if (managerModal) managerModal.onclick = (e) => { if (e.target === managerModal) toggleModal(managerModal, false); };
+  // Close create modal
+  const closeCreateBtn = $('btn-close-create');
+  if (closeCreateBtn) closeCreateBtn.onclick = () => toggleModal($('modal-create-reviewer'), false);
 
-  // Create new reviewer button in manager
-  const createBtn = $('btn-create-reviewer');
-  if (createBtn) createBtn.onclick = () => {
-    const nameInput = $('reviewer-name-input');
-    const name = nameInput ? nameInput.value.trim() : '';
-    if (!name) {
-      showToast({ type: 'warning', title: 'Name Required', message: 'Please enter a reviewer name.' });
-      if (nameInput) nameInput.focus();
-      return;
-    }
-    createReviewer(name);
-    if (nameInput) nameInput.value = '';
-    renderDashboard();
-    renderManagerContent();
-    showToast({ type: 'success', title: 'Reviewer Created!', message: `"${name}" is ready for terms.` });
-  };
+  // Create modal backdrop click
+  const createModal = $('modal-create-reviewer');
+  if (createModal) createModal.onclick = (e) => { if (e.target === createModal) toggleModal(createModal, false); };
 
-  // Add manual term
-  const addTermBtn = $('btn-add-term');
-  if (addTermBtn) addTermBtn.onclick = () => {
-    const reviewer = getActiveReviewer();
-    if (!reviewer) {
-      showToast({ type: 'warning', title: 'No Reviewer', message: 'Please create or select a reviewer first.' });
-      return;
-    }
-    reviewer.items.push({ term: 'New Term', def: 'New Definition' });
-    reviewer.updatedAt = Date.now();
-    saveReviewers();
-    renderDashboard();
-    renderManagerTermsEditor();
-  };
+  // Create Now button
+  const createNowBtn = $('btn-create-now');
+  if (createNowBtn) createNowBtn.onclick = handleCreateNow;
 
-  // File upload dropzone
+  // Create modal: Tab switching (Upload vs Paste)
+  const createTabUpload = $('create-tab-upload');
+  const createTabPaste = $('create-tab-paste');
+  const createUploadSection = $('create-upload-section');
+  const createPasteSection = $('create-paste-section');
+
+  if (createTabUpload && createTabPaste && createUploadSection && createPasteSection) {
+    createTabUpload.onclick = () => {
+      createTabUpload.className = 'btn btn-sm btn-primary';
+      createTabUpload.style.color = '';
+      createTabPaste.className = 'btn btn-sm btn-ghost';
+      createTabPaste.style.color = 'var(--text-secondary)';
+      createUploadSection.classList.remove('hidden');
+      createPasteSection.classList.add('hidden');
+    };
+
+    createTabPaste.onclick = () => {
+      createTabPaste.className = 'btn btn-sm btn-primary';
+      createTabPaste.style.color = '';
+      createTabUpload.className = 'btn btn-sm btn-ghost';
+      createTabUpload.style.color = 'var(--text-secondary)';
+      createPasteSection.classList.remove('hidden');
+      createUploadSection.classList.add('hidden');
+      if ($('create-paste-input')) $('create-paste-input').focus();
+    };
+  }
+
+  // File upload dropzone (inside create modal)
   const dropzone = $('drop-zone');
   const fileInput = $('file-input');
   if (dropzone && fileInput) {
@@ -1862,35 +1814,100 @@ const wireEvents = () => {
     };
   }
 
-  // Paste Notes Tab Switching & Scanner Action
-  const tabUpload = $('tab-btn-upload');
-  const tabPaste = $('tab-btn-paste');
-  const uploadSection = $('manager-upload-section');
-  const pasteSection = $('manager-paste-section');
+  // ========== MANAGE REVIEWER MODAL ==========
 
-  if (tabUpload && tabPaste && uploadSection && pasteSection) {
-    tabUpload.onclick = () => {
-      tabUpload.className = 'btn btn-sm btn-primary';
-      tabUpload.style.color = '';
-      tabPaste.className = 'btn btn-sm btn-ghost';
-      tabPaste.style.color = 'var(--text-secondary)';
-      uploadSection.classList.remove('hidden');
-      pasteSection.classList.add('hidden');
-    };
+  // Gear icon (desktop + mobile) opens manage modal
+  const gearBtn = $('btn-manage-gear');
+  if (gearBtn) gearBtn.onclick = openManageModal;
+  const gearBtnMobile = $('btn-manage-gear-mobile');
+  if (gearBtnMobile) gearBtnMobile.onclick = openManageModal;
 
-    tabPaste.onclick = () => {
-      tabPaste.className = 'btn btn-sm btn-primary';
-      tabPaste.style.color = '';
-      tabUpload.className = 'btn btn-sm btn-ghost';
-      tabUpload.style.color = 'var(--text-secondary)';
-      pasteSection.classList.remove('hidden');
-      uploadSection.classList.add('hidden');
-      if ($('paste-notes-input')) $('paste-notes-input').focus();
-    };
-  }
+  // Close manage modal
+  const closeManageBtn = $('btn-close-manage');
+  if (closeManageBtn) closeManageBtn.onclick = () => toggleModal($('modal-manage-reviewer'), false);
+  const doneManageBtn = $('btn-done-manage');
+  if (doneManageBtn) doneManageBtn.onclick = () => toggleModal($('modal-manage-reviewer'), false);
 
-  const btnProcessPasted = $('btn-process-pasted-text');
-  if (btnProcessPasted) btnProcessPasted.onclick = handleProcessPastedText;
+  // Manage modal backdrop click
+  const manageModal = $('modal-manage-reviewer');
+  if (manageModal) manageModal.onclick = (e) => { if (e.target === manageModal) toggleModal(manageModal, false); };
+
+  // Edit This Reviewer button
+  const editBtn = $('btn-edit-reviewer');
+  if (editBtn) editBtn.onclick = () => {
+    const dropdown = $('manage-reviewer-select');
+    if (dropdown) {
+      appState.activeReviewerId = dropdown.value;
+      renderDashboard();
+    }
+    renderManageTermsEditor();
+  };
+
+  // Delete Reviewer button (inside manage modal)
+  const deleteBtn = $('btn-delete-reviewer');
+  if (deleteBtn) deleteBtn.onclick = async () => {
+    const dropdown = $('manage-reviewer-select');
+    if (!dropdown || !dropdown.value) return;
+    const reviewerId = dropdown.value;
+    const reviewer = appState.reviewers.find(r => r.id === reviewerId);
+    if (!reviewer) return;
+
+    const confirmed = await showConfirm({
+      title: `Delete "${reviewer.name}"?`,
+      message: `All ${reviewer.items.length} terms will be permanently deleted.`,
+      confirmText: 'Delete',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    appState.reviewers = appState.reviewers.filter(r => r.id !== reviewerId);
+    if (appState.activeReviewerId === reviewerId) {
+      appState.activeReviewerId = appState.reviewers.length > 0 ? appState.reviewers[0].id : null;
+    }
+    saveReviewers();
+    renderDashboard();
+
+    if (appState.reviewers.length === 0) {
+      toggleModal($('modal-manage-reviewer'), false);
+    } else {
+      renderManageModal();
+    }
+
+    showToast({ type: 'info', title: 'Reviewer Deleted', message: `"${reviewer.name}" has been removed.` });
+  };
+
+  // "Create New Reviewer" button inside manage modal
+  const createFromManageBtn = $('btn-create-from-manage');
+  if (createFromManageBtn) createFromManageBtn.onclick = () => {
+    toggleModal($('modal-manage-reviewer'), false);
+    setTimeout(() => toggleModal($('modal-create-reviewer'), true), 300);
+  };
+
+  // Add term button inside manage modal
+  const addTermBtn = $('btn-manage-add-term');
+  if (addTermBtn) addTermBtn.onclick = () => {
+    const dropdown = $('manage-reviewer-select');
+    if (!dropdown) return;
+    const reviewer = appState.reviewers.find(r => r.id === dropdown.value);
+    if (!reviewer) {
+      showToast({ type: 'warning', title: 'No Reviewer', message: 'Please select a reviewer first.' });
+      return;
+    }
+    reviewer.items.push({ term: 'New Term', def: 'New Definition' });
+    reviewer.updatedAt = Date.now();
+    saveReviewers();
+    renderDashboard();
+    renderManageTermsEditor();
+  };
+
+  // Save Changes button inside manage modal
+  const saveBtn = $('btn-save-reviewer');
+  if (saveBtn) saveBtn.onclick = () => {
+    saveReviewers();
+    renderDashboard();
+    showToast({ type: 'success', title: 'Saved!', message: 'Reviewer changes have been saved.' });
+  };
 
   // Quiz: Next question
   const nextBtn = $('btn-next-question');
