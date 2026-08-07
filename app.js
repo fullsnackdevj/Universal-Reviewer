@@ -2099,6 +2099,17 @@ const initPasscodeGate = () => {
     };
   }
 
+  const toggleVisibilityBtn = $('btn-toggle-passcode-visibility');
+  const eyeIcon = $('passcode-eye-icon');
+  if (toggleVisibilityBtn && passcodeInput && eyeIcon) {
+    toggleVisibilityBtn.onclick = () => {
+      const isPassword = passcodeInput.type === 'password';
+      passcodeInput.type = isPassword ? 'text' : 'password';
+      eyeIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+      passcodeInput.focus();
+    };
+  }
+
   setTimeout(() => {
     if (passcodeInput && !isUnlocked) passcodeInput.focus();
   }, 200);

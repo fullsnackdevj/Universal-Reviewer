@@ -1541,10 +1541,34 @@ body {
 
 .passcode-input {
   padding-left: 2.5rem !important;
+  padding-right: 2.5rem !important;
   text-align: center;
   letter-spacing: 0.05em;
   font-weight: 700;
   font-size: 1rem !important;
+}
+
+.passcode-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  z-index: 2;
+}
+
+.passcode-toggle-btn:hover {
+  color: var(--text-primary);
 }
 
 .passcode-error-msg {
