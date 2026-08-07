@@ -1374,7 +1374,6 @@ const showQuizFeedback = (isCorrect, message) => {
 
   if (feedback) {
     feedback.classList.remove('hidden', 'feedback-correct', 'feedback-incorrect');
-    feedback.classList.add(isCorrect ? 'feedback-correct' : 'feedback-incorrect');
     feedback.innerHTML = `<div class="feedback-banner ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}">${message}</div>`;
   }
 
