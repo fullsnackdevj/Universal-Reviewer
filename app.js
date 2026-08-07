@@ -2072,6 +2072,7 @@ const initPasscodeGate = () => {
 
   const handlePasscodeAttempt = () => {
     if (!passcodeInput) return;
+    if (sessionStorage.getItem(PASSCODE_STORAGE_KEY) === 'true') return;
     const inputVal = passcodeInput.value.trim();
 
     if (VALID_PASSCODES.includes(inputVal)) {
@@ -2097,9 +2098,6 @@ const initPasscodeGate = () => {
       handlePasscodeAttempt();
     };
   }
-
-  const submitBtn = $('btn-passcode-submit');
-  if (submitBtn) submitBtn.onclick = handlePasscodeAttempt;
 
   setTimeout(() => {
     if (passcodeInput && !isUnlocked) passcodeInput.focus();
