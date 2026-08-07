@@ -825,6 +825,16 @@ const extractTextFromPptx = async (file) => {
 const parseTermsFromText = (text) => {
   if (!text || !text.trim()) return [];
 
+  const isNewItemStart = (line) => {
+    if (!line) return true;
+    const l = line.trim();
+    return /^[●○•\*\-\#]/.test(l) ||
+           /^\d+[\.\)]/.test(l) ||
+           /^(?:Q|Question)\s*[:\.\-]/i.test(l) ||
+           /^(?:[●○•\*\-\#\s]|\d+[\.\)]\s*)*[A-Za-z0-9\.\"\'][A-Za-z0-9\s\(\)\-\/\,\'\"\.]{0,75}\s*[:–—\-]\s*/.test(l) ||
+           /^[A-Za-z0-9\s\+\-\(\)]{2,40}\s{2,}/.test(l);
+  };
+
   // Soft Line Unwrapping: Join lines that end without punctuation or with dangling words
   const unwrapText = (input) => {
     const lines = input.split('\n');
@@ -845,7 +855,7 @@ const parseTermsFromText = (text) => {
         const endsPunct = /[.:;?!—–\-]\s*$/.test(buffer);
         const startsLower = /^[a-z0-9,]/.test(line);
 
-        if (danglingEnd || (!endsPunct && (startsLower || buffer.length > 50))) {
+        if (!isNewItemStart(line) && (danglingEnd || (!endsPunct && (startsLower || buffer.length > 50)))) {
           buffer += ' ' + line;
         } else {
           result.push(buffer);
@@ -885,14 +895,6 @@ const parseTermsFromText = (text) => {
       formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
     return formatted;
-  };
-
-  const isNewItemStart = (line) => {
-    if (!line) return true;
-    const l = line.trim();
-    return /^[●○•\*\-\#]/.test(l) ||
-           /^\d+[\.\)]/.test(l) ||
-           /^[A-Za-z0-9\.\"\']{1,60}\s*[:–—\-]\s/.test(l);
   };
 
   const parseTermAndAliases = (raw) => {
