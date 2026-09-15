@@ -524,13 +524,20 @@ body {
   gap: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-self: start;
+  min-width: 0;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   cursor: pointer;
   user-select: none;
-  justify-self: start;
   flex-shrink: 0;
 }
 
@@ -1665,4 +1672,212 @@ body {
   .cloud-sync-pill {
     display: none;
   }
+}
+
+/* =====================================================
+   Kisstine Custom Theme Palette
+   Colors: Mist (#f4f3f1), Peony (#f2d1d4), Mauve (#D8959B), Sage (#829672), Evergreen (#344C3D)
+   ===================================================== */
+:root.theme-kisstine {
+  --palette-mist:      #f4f3f1;
+  --palette-peony:     #f2d1d4;
+  --palette-mauve:     #D8959B;
+  --palette-sage:      #829672;
+  --palette-evergreen: #344C3D;
+
+  --blue-50:  #fcf8f8;
+  --blue-100: #faedf0;
+  --blue-200: #f2d1d4; /* Peony */
+  --blue-300: #e8b3b9;
+  --blue-400: #df9ea6;
+  --blue-500: #D8959B; /* Mauve */
+  --blue-600: #c67f86;
+  --blue-700: #a9656c;
+  --blue-800: #829672; /* Sage */
+  --blue-900: #57684d;
+  --blue-950: #344C3D; /* Evergreen */
+
+  --surface-primary:   #ffffff;
+  --surface-secondary: #f4f3f1; /* Mist */
+  --surface-elevated:  rgba(255, 255, 255, 0.94);
+  --text-primary:      #344C3D; /* Evergreen */
+  --text-secondary:    #607163;
+  --text-muted:        #8b9d8e;
+  --border-default:    #e5dcda;
+  --border-subtle:     rgba(216, 149, 155, 0.2);
+
+  --shadow-blue:       0 4px 14px -3px rgba(216, 149, 155, 0.4);
+  --shadow-glow:       0 0 20px rgba(216, 149, 155, 0.2);
+}
+
+.theme-kisstine body {
+  background: #f4f3f1;
+  color: #344C3D;
+}
+
+.theme-kisstine .app-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(216, 149, 155, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(130, 150, 114, 0.12), transparent),
+    #f4f3f1;
+}
+
+.theme-kisstine .brand-text {
+  background: linear-gradient(135deg, #D8959B, #344C3D);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.theme-kisstine .user-avatar {
+  border-color: #D8959B;
+  box-shadow: 0 0 10px rgba(216, 149, 155, 0.35);
+}
+
+.theme-kisstine .cloud-sync-pill {
+  background: rgba(130, 150, 114, 0.14);
+  border: 1px solid rgba(130, 150, 114, 0.3);
+  color: #344C3D;
+}
+
+.theme-kisstine .score-container-desktop,
+.theme-kisstine .score-container-mobile {
+  border-color: rgba(216, 149, 155, 0.25);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.theme-kisstine .score-pill-correct {
+  background: rgba(130, 150, 114, 0.18);
+  color: #344C3D;
+  border-color: rgba(130, 150, 114, 0.35);
+}
+
+.theme-kisstine .score-pill-incorrect {
+  background: rgba(216, 149, 155, 0.18);
+  color: #c67f86;
+  border-color: rgba(216, 149, 155, 0.35);
+}
+
+.theme-kisstine .score-pill-points {
+  background: rgba(242, 209, 212, 0.4);
+  color: #a85f67;
+  border-color: rgba(216, 149, 155, 0.35);
+}
+
+.theme-kisstine .btn-primary {
+  background: linear-gradient(135deg, #D8959B, #c67f86);
+  color: #ffffff;
+  box-shadow: 0 4px 14px -3px rgba(216, 149, 155, 0.45);
+}
+
+.theme-kisstine .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e5a4ab, #D8959B);
+  box-shadow: 0 6px 20px -3px rgba(216, 149, 155, 0.55);
+}
+
+.theme-kisstine .header-actions .btn-icon:hover {
+  background: rgba(242, 209, 212, 0.35);
+  border-color: rgba(216, 149, 155, 0.35);
+  color: #344C3D;
+}
+
+/* ---------- Kisstine Dark Mode (Active in Image 1!) ---------- */
+:root.dark.theme-kisstine,
+:root.dark .theme-kisstine {
+  --surface-primary:   #192620; /* Deep Evergreen card surface */
+  --surface-secondary: #121c17; /* Deep Evergreen background */
+  --surface-elevated:  rgba(25, 38, 32, 0.95);
+  --text-primary:      #f4f3f1; /* Mist */
+  --text-secondary:    #c5d3c3; /* Soft Sage */
+  --text-muted:        #7e9280;
+  --border-default:    #2a3e33;
+  --border-subtle:     rgba(130, 150, 114, 0.22);
+
+  --blue-200: #f2d1d4; /* Peony */
+  --blue-300: #e8b3b9;
+  --blue-400: #df9ea6;
+  --blue-500: #D8959B; /* Mauve */
+  --blue-600: #c67f86;
+
+  --shadow-blue: 0 4px 14px -3px rgba(216, 149, 155, 0.35);
+  --shadow-glow: 0 0 25px rgba(216, 149, 155, 0.18);
+}
+
+.dark.theme-kisstine body {
+  background: #121c17 !important;
+  color: #f4f3f1 !important;
+}
+
+.dark.theme-kisstine .app-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(216, 149, 155, 0.14), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(52, 76, 61, 0.4), transparent),
+    #121c17 !important;
+}
+
+.dark.theme-kisstine .brand-text {
+  background: linear-gradient(135deg, #f2d1d4, #D8959B);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.dark.theme-kisstine .score-container-desktop,
+.dark.theme-kisstine .score-container-mobile {
+  background: rgba(18, 28, 23, 0.8) !important;
+  border-color: rgba(130, 150, 114, 0.28) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark.theme-kisstine .score-pill-correct {
+  background: rgba(130, 150, 114, 0.22);
+  color: #b8d2ad;
+  border-color: rgba(130, 150, 114, 0.4);
+}
+
+.dark.theme-kisstine .score-pill-incorrect {
+  background: rgba(216, 149, 155, 0.22);
+  color: #f2d1d4;
+  border-color: rgba(216, 149, 155, 0.4);
+}
+
+.dark.theme-kisstine .score-pill-points {
+  background: rgba(242, 209, 212, 0.18);
+  color: #f2d1d4;
+  border-color: rgba(242, 209, 212, 0.35);
+}
+
+.dark.theme-kisstine .cloud-sync-pill {
+  background: rgba(130, 150, 114, 0.22);
+  border-color: rgba(130, 150, 114, 0.38);
+  color: #f2d1d4;
+}
+
+.dark.theme-kisstine .user-avatar {
+  border-color: #D8959B;
+  box-shadow: 0 0 12px rgba(216, 149, 155, 0.4);
+}
+
+.dark.theme-kisstine .btn-primary {
+  background: linear-gradient(135deg, #D8959B, #c67f86);
+  color: #ffffff;
+}
+
+.dark.theme-kisstine .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e5a4ab, #D8959B);
+  box-shadow: 0 6px 20px -3px rgba(216, 149, 155, 0.5);
+}
+
+.dark.theme-kisstine .header-actions .btn-icon:hover {
+  background: rgba(130, 150, 114, 0.22);
+  border-color: rgba(130, 150, 114, 0.35);
+  color: #f2d1d4;
+}
+
+.dark.theme-kisstine .card {
+  background: #192620;
+  border-color: rgba(130, 150, 114, 0.25);
+}
+
+.dark.theme-kisstine .modal-panel {
+  background: #192620;
+  border-color: rgba(130, 150, 114, 0.3);
 }

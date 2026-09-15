@@ -513,10 +513,27 @@ const showScreen = (screenId) => {
 };
 
 // ======================== THEME MANAGEMENT ========================
+const applyUserTheme = (user) => {
+  const isKisstine = user && (
+    (user.email && user.email.toLowerCase().includes('kisstine')) ||
+    (user.displayName && user.displayName.toLowerCase().includes('kisstine'))
+  );
+  if (isKisstine) {
+    document.documentElement.classList.add('theme-kisstine');
+    localStorage.setItem('ur_custom_theme', 'kisstine');
+  } else {
+    document.documentElement.classList.remove('theme-kisstine');
+    localStorage.removeItem('ur_custom_theme');
+  }
+};
+
 const initTheme = () => {
   const saved = localStorage.getItem(STORAGE_KEYS.theme);
   if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.classList.add('dark');
+  }
+  if (localStorage.getItem('ur_custom_theme') === 'kisstine') {
+    document.documentElement.classList.add('theme-kisstine');
   }
 };
 
@@ -546,6 +563,7 @@ const signInWithGoogle = async () => {
 const signOut = async () => {
   if (!auth) return;
   try {
+    applyUserTheme(null);
     await auth.signOut();
     showToast({ type: 'info', title: 'Signed Out', message: 'You have been signed out.' });
   } catch (e) {
@@ -629,8 +647,10 @@ const onAuthStateChange = async (user) => {
       email: user.email,
       photoURL: user.photoURL
     };
+    applyUserTheme(appState.user);
   } else {
     appState.user = null;
+    applyUserTheme(null);
     // Stop real-time listener when signed out
     if (appState.cloudSync.unsubscribe) {
       appState.cloudSync.unsubscribe();
@@ -669,6 +689,7 @@ const renderAuthUI = async () => {
   const adminBtn = $('btn-admin-panel');
 
   if (appState.user) {
+    applyUserTheme(appState.user);
     if (signInBtn) signInBtn.classList.add('hidden');
     if (userSection) userSection.classList.remove('hidden');
     if (userAvatar) {
