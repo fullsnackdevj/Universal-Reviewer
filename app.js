@@ -521,6 +521,16 @@ const applyUserTheme = (user) => {
   if (isKisstine) {
     document.documentElement.classList.add('theme-kisstine');
     localStorage.setItem('ur_custom_theme', 'kisstine');
+
+    // Default Kisstine's account to Light Mode
+    const kisstinePref = localStorage.getItem('ur_kisstine_theme_mode');
+    if (!kisstinePref || kisstinePref === 'light') {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('ur_kisstine_theme_mode', 'light');
+      localStorage.setItem(STORAGE_KEYS.theme, 'light');
+    } else if (kisstinePref === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
   } else {
     document.documentElement.classList.remove('theme-kisstine');
     localStorage.removeItem('ur_custom_theme');
@@ -528,12 +538,22 @@ const applyUserTheme = (user) => {
 };
 
 const initTheme = () => {
+  const isKisstineStored = localStorage.getItem('ur_custom_theme') === 'kisstine';
+  if (isKisstineStored) {
+    document.documentElement.classList.add('theme-kisstine');
+    const kisstinePref = localStorage.getItem('ur_kisstine_theme_mode');
+    // Default to light mode for Kisstine
+    if (kisstinePref === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return;
+  }
+
   const saved = localStorage.getItem(STORAGE_KEYS.theme);
   if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.classList.add('dark');
-  }
-  if (localStorage.getItem('ur_custom_theme') === 'kisstine') {
-    document.documentElement.classList.add('theme-kisstine');
   }
 };
 
@@ -541,6 +561,9 @@ const toggleTheme = () => {
   document.documentElement.classList.toggle('dark');
   const isDark = document.documentElement.classList.contains('dark');
   localStorage.setItem(STORAGE_KEYS.theme, isDark ? 'dark' : 'light');
+  if (document.documentElement.classList.contains('theme-kisstine')) {
+    localStorage.setItem('ur_kisstine_theme_mode', isDark ? 'dark' : 'light');
+  }
 };
 
 // ======================== AUTH: GOOGLE SIGN-IN ========================

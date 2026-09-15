@@ -1780,6 +1780,38 @@ body {
   color: #344C3D;
 }
 
+/* Kisstine Light Mode Component Accents */
+.theme-kisstine:not(.dark) .card {
+  background: #ffffff;
+  border-color: #e5dcda;
+  box-shadow: 0 4px 16px rgba(216, 149, 155, 0.08);
+}
+
+.theme-kisstine:not(.dark) .app-header {
+  background: rgba(244, 243, 241, 0.88);
+  border-bottom: 1px solid rgba(216, 149, 155, 0.22);
+}
+
+.theme-kisstine:not(.dark) .modal-panel {
+  background: #ffffff;
+  border-color: #e5dcda;
+}
+
+.theme-kisstine:not(.dark) .input,
+.theme-kisstine:not(.dark) .textarea,
+.theme-kisstine:not(.dark) .select {
+  background: #ffffff;
+  border-color: #e5dcda;
+  color: #344C3D;
+}
+
+.theme-kisstine:not(.dark) .input:focus,
+.theme-kisstine:not(.dark) .textarea:focus,
+.theme-kisstine:not(.dark) .select:focus {
+  border-color: #D8959B;
+  box-shadow: 0 0 0 3px rgba(216, 149, 155, 0.2);
+}
+
 /* ---------- Kisstine Dark Mode (Active in Image 1!) ---------- */
 :root.dark.theme-kisstine,
 :root.dark .theme-kisstine {
