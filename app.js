@@ -646,6 +646,19 @@ const onAuthStateChange = async (user) => {
   if (appState.user && appState.isApproved && db) {
     initCloudSync();
   }
+
+  // Personalized cheer for signed-in approved users
+  if (appState.user && appState.isApproved) {
+    const firstName = (appState.user.displayName || '').split(' ')[0] || 'Student';
+    setTimeout(() => {
+      showToast({
+        type: 'success',
+        title: `Go ${firstName}! 🐸`,
+        message: `You got this! Pass ALL your exams — I believe in you! ~kwedepp 🐸`,
+        duration: 6000
+      });
+    }, 1500);
+  }
 };
 
 const renderAuthUI = async () => {
