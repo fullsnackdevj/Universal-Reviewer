@@ -56,7 +56,13 @@ const appState = {
     currentQuestion: null,
     isAnswered: false
   },
-  leaderboard: []
+  leaderboard: [],
+  cloudSync: {
+    initialized: false,
+    syncing: false,
+    lastSyncAt: null,
+    unsubscribe: null     // Real-time listener unsubscribe function
+  }
 };
 
 // ======================== LOCAL STORAGE ========================
@@ -66,12 +72,11 @@ const STORAGE_KEYS = {
   guestScore: 'ur_guest_score'
 };
 
-const saveReviewers = () => {
+// --- LOCAL CACHE: Always keep localStorage as a fast local cache ---
+const saveReviewersToLocalCache = () => {
   try {
-    // Save without file blob data to keep storage manageable
     const stripped = appState.reviewers.map(r => ({
       ...r,
-      items: r.items,
       files: undefined  // Don't store raw file data
     }));
     localStorage.setItem(STORAGE_KEYS.reviewers, JSON.stringify(stripped));
@@ -80,7 +85,7 @@ const saveReviewers = () => {
   }
 };
 
-const loadReviewers = () => {
+const loadReviewersFromLocalCache = () => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.reviewers);
     if (data) {
@@ -92,6 +97,265 @@ const loadReviewers = () => {
   } catch (e) {
     console.warn('LocalStorage load failed:', e);
     appState.reviewers = [];
+  }
+};
+
+// --- ZERO-LOSS BACKUP: Immutable snapshot before any cloud sync ---
+const backupLocalReviewers = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.reviewers);
+    if (data && JSON.parse(data).length > 0) {
+      const backupKey = `ur_reviewers_backup_${Date.now()}`;
+      localStorage.setItem(backupKey, data);
+      console.log(`[Cloud Sync] Safety backup created: ${backupKey} (${JSON.parse(data).length} reviewers)`);
+    }
+  } catch (e) {
+    console.warn('[Cloud Sync] Backup creation failed:', e);
+  }
+};
+
+// --- CLOUD SYNC: Save a single reviewer to Firestore ---
+const saveReviewerToCloud = async (reviewer) => {
+  if (!db || !appState.user) return;
+  try {
+    const docData = {
+      id: reviewer.id,
+      name: reviewer.name || 'Untitled Reviewer',
+      description: reviewer.description || '',
+      items: reviewer.items || [],
+      createdAt: reviewer.createdAt || Date.now(),
+      updatedAt: reviewer.updatedAt || Date.now(),
+      createdBy: reviewer.createdBy || appState.user.uid,
+      creatorName: reviewer.creatorName || appState.user.displayName || '',
+      creatorEmail: reviewer.creatorEmail || appState.user.email || ''
+    };
+    await db.collection('reviewers').doc(reviewer.id).set(docData, { merge: true });
+  } catch (e) {
+    console.warn('[Cloud Sync] Failed to save reviewer to cloud:', e);
+  }
+};
+
+// --- CLOUD SYNC: Delete a reviewer from Firestore ---
+const deleteReviewerFromCloud = async (reviewerId) => {
+  if (!db || !appState.user) return;
+  try {
+    await db.collection('reviewers').doc(reviewerId).delete();
+  } catch (e) {
+    console.warn('[Cloud Sync] Failed to delete reviewer from cloud:', e);
+  }
+};
+
+// --- UNIFIED SAVE: Saves to localStorage (cache) AND Firestore (cloud) ---
+const saveReviewers = () => {
+  saveReviewersToLocalCache();
+  // If a specific reviewer was just modified, save it to cloud
+  // This is called after mutations, so we sync all reviewers that changed
+  if (db && appState.user && appState.cloudSync.initialized) {
+    // Debounced cloud save — save each reviewer in current state
+    appState.reviewers.forEach(r => saveReviewerToCloud(r));
+  }
+};
+
+// --- UNIFIED LOAD: Load from localStorage first (fast), then sync from cloud ---
+const loadReviewers = () => {
+  loadReviewersFromLocalCache();
+};
+
+// --- CLOUD SYNC ENGINE: One-time migration + real-time listener ---
+const initCloudSync = async () => {
+  if (!db || !appState.user) return;
+  if (appState.cloudSync.initialized) return;
+
+  updateCloudSyncStatus('syncing');
+
+  // Step 1: Create immutable safety backup of whatever is in localStorage RIGHT NOW
+  backupLocalReviewers();
+
+  // Step 2: Load local reviewers (already loaded in initApp, but ensure fresh)
+  const localReviewers = [...appState.reviewers];
+  const localIds = new Set(localReviewers.map(r => r.id));
+
+  // Step 3: Fetch ALL reviewers from Firestore
+  let cloudReviewers = [];
+  try {
+    const snapshot = await db.collection('reviewers').get();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      cloudReviewers.push(data);
+    });
+  } catch (e) {
+    console.error('[Cloud Sync] Failed to fetch cloud reviewers:', e);
+    updateCloudSyncStatus('error');
+    return;
+  }
+
+  const cloudIds = new Set(cloudReviewers.map(r => r.id));
+
+  // Step 4: Upload local-only reviewers to Firestore (tablet → cloud migration)
+  let uploadedCount = 0;
+  for (const localR of localReviewers) {
+    if (!cloudIds.has(localR.id)) {
+      // This reviewer exists ONLY locally (e.g. created on the tablet) — upload it!
+      const enriched = {
+        ...localR,
+        createdBy: localR.createdBy || appState.user.uid,
+        creatorName: localR.creatorName || appState.user.displayName || '',
+        creatorEmail: localR.creatorEmail || appState.user.email || ''
+      };
+      await saveReviewerToCloud(enriched);
+      uploadedCount++;
+      console.log(`[Cloud Sync] Uploaded local reviewer to cloud: "${localR.name}"`);
+    }
+  }
+
+  // Step 5: Merge cloud-only reviewers into local state
+  let downloadedCount = 0;
+  for (const cloudR of cloudReviewers) {
+    if (!localIds.has(cloudR.id)) {
+      appState.reviewers.push(cloudR);
+      downloadedCount++;
+      console.log(`[Cloud Sync] Downloaded cloud reviewer to local: "${cloudR.name}"`);
+    } else {
+      // Update local reviewer with latest cloud data (cloud wins for existing items)
+      const localIdx = appState.reviewers.findIndex(r => r.id === cloudR.id);
+      if (localIdx >= 0) {
+        const localUpdated = appState.reviewers[localIdx].updatedAt || 0;
+        const cloudUpdated = cloudR.updatedAt || 0;
+        if (cloudUpdated > localUpdated) {
+          appState.reviewers[localIdx] = cloudR;
+        }
+      }
+    }
+  }
+
+  // Step 6: Set active reviewer if none set
+  if (appState.reviewers.length > 0 && !appState.activeReviewerId) {
+    appState.activeReviewerId = appState.reviewers[0].id;
+  }
+
+  // Step 7: Save merged state to local cache
+  saveReviewersToLocalCache();
+
+  // Step 8: Show user-friendly feedback
+  if (uploadedCount > 0) {
+    showToast({
+      type: 'success',
+      title: 'Reviewers Synced to Cloud',
+      message: `Safely uploaded ${uploadedCount} local reviewer${uploadedCount > 1 ? 's' : ''} to your cloud database.`,
+      duration: 5000
+    });
+  }
+  if (downloadedCount > 0) {
+    showToast({
+      type: 'info',
+      title: 'Cloud Reviewers Loaded',
+      message: `Downloaded ${downloadedCount} reviewer${downloadedCount > 1 ? 's' : ''} from the cloud.`,
+      duration: 4000
+    });
+  }
+
+  appState.cloudSync.initialized = true;
+  appState.cloudSync.lastSyncAt = Date.now();
+  updateCloudSyncStatus('synced');
+  renderDashboard();
+
+  // Step 9: Start real-time listener for live multi-device updates
+  startRealtimeReviewerListener();
+};
+
+// --- REAL-TIME LISTENER: Firestore onSnapshot for live cross-device sync ---
+const startRealtimeReviewerListener = () => {
+  if (!db || !appState.user) return;
+
+  // Unsubscribe from any existing listener
+  if (appState.cloudSync.unsubscribe) {
+    appState.cloudSync.unsubscribe();
+  }
+
+  appState.cloudSync.unsubscribe = db.collection('reviewers').onSnapshot(
+    (snapshot) => {
+      let changed = false;
+
+      snapshot.docChanges().forEach(change => {
+        const data = change.doc.data();
+
+        if (change.type === 'added' || change.type === 'modified') {
+          const existingIdx = appState.reviewers.findIndex(r => r.id === data.id);
+          if (existingIdx >= 0) {
+            // Only update if cloud version is newer
+            const localUpdated = appState.reviewers[existingIdx].updatedAt || 0;
+            const cloudUpdated = data.updatedAt || 0;
+            if (cloudUpdated > localUpdated) {
+              appState.reviewers[existingIdx] = data;
+              changed = true;
+            }
+          } else {
+            // New reviewer from another device
+            appState.reviewers.push(data);
+            changed = true;
+          }
+        } else if (change.type === 'removed') {
+          const beforeLen = appState.reviewers.length;
+          appState.reviewers = appState.reviewers.filter(r => r.id !== data.id);
+          if (appState.reviewers.length !== beforeLen) {
+            changed = true;
+            if (appState.activeReviewerId === data.id) {
+              appState.activeReviewerId = appState.reviewers.length > 0 ? appState.reviewers[0].id : null;
+            }
+          }
+        }
+      });
+
+      if (changed) {
+        if (appState.reviewers.length > 0 && !appState.activeReviewerId) {
+          appState.activeReviewerId = appState.reviewers[0].id;
+        }
+        saveReviewersToLocalCache();
+        appState.cloudSync.lastSyncAt = Date.now();
+        updateCloudSyncStatus('synced');
+        renderDashboard();
+      }
+    },
+    (error) => {
+      console.error('[Cloud Sync] Real-time listener error:', error);
+      updateCloudSyncStatus('error');
+    }
+  );
+};
+
+// --- CLOUD SYNC UI STATUS ---
+const updateCloudSyncStatus = (status) => {
+  const indicator = $('cloud-sync-status');
+  if (!indicator) return;
+
+  const icon = indicator.querySelector('i');
+  const label = indicator.querySelector('span');
+  if (!icon || !label) return;
+
+  indicator.classList.remove('hidden');
+
+  switch (status) {
+    case 'syncing':
+      icon.className = 'fas fa-cloud-arrow-up';
+      label.textContent = 'Syncing...';
+      indicator.style.color = 'var(--blue-500)';
+      indicator.classList.add('cloud-syncing');
+      break;
+    case 'synced':
+      icon.className = 'fas fa-cloud';
+      label.textContent = 'Synced';
+      indicator.style.color = 'var(--success)';
+      indicator.classList.remove('cloud-syncing');
+      break;
+    case 'error':
+      icon.className = 'fas fa-cloud';
+      label.textContent = 'Offline';
+      indicator.style.color = 'var(--warning)';
+      indicator.classList.remove('cloud-syncing');
+      break;
+    default:
+      indicator.classList.add('hidden');
+      break;
   }
 };
 
@@ -367,8 +631,21 @@ const onAuthStateChange = async (user) => {
     };
   } else {
     appState.user = null;
+    // Stop real-time listener when signed out
+    if (appState.cloudSync.unsubscribe) {
+      appState.cloudSync.unsubscribe();
+      appState.cloudSync.unsubscribe = null;
+    }
+    appState.cloudSync.initialized = false;
+    updateCloudSyncStatus(null);
   }
+
   await renderAuthUI();
+
+  // Start cloud sync after auth is confirmed and user is approved
+  if (appState.user && appState.isApproved && db) {
+    initCloudSync();
+  }
 };
 
 const renderAuthUI = async () => {
@@ -618,11 +895,16 @@ const createReviewer = (name) => {
     description: '',
     items: [],
     createdAt: Date.now(),
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
+    createdBy: appState.user ? appState.user.uid : 'local',
+    creatorName: appState.user ? (appState.user.displayName || '') : '',
+    creatorEmail: appState.user ? (appState.user.email || '') : ''
   };
   appState.reviewers.push(reviewer);
   appState.activeReviewerId = reviewer.id;
   saveReviewers();
+  // Explicitly save this new reviewer to cloud immediately
+  if (db && appState.user) saveReviewerToCloud(reviewer);
   return reviewer;
 };
 
@@ -639,7 +921,9 @@ const deleteReviewer = async (reviewerId) => {
   if (appState.activeReviewerId === reviewerId) {
     appState.activeReviewerId = appState.reviewers.length > 0 ? appState.reviewers[0].id : null;
   }
-  saveReviewers();
+  saveReviewersToLocalCache();
+  // Delete from Firestore cloud
+  deleteReviewerFromCloud(reviewerId);
   renderDashboard();
   if (appState.reviewers.length > 0) {
     renderManageModal();
@@ -653,6 +937,8 @@ const addItemToReviewer = (reviewerId, term, def) => {
   reviewer.items.push({ term, def });
   reviewer.updatedAt = Date.now();
   saveReviewers();
+  // Explicitly sync this modified reviewer to cloud
+  if (db && appState.user) saveReviewerToCloud(reviewer);
 };
 
 // ======================== DOCUMENT PARSERS ========================
@@ -1881,7 +2167,8 @@ const wireEvents = () => {
     if (appState.activeReviewerId === reviewerId) {
       appState.activeReviewerId = appState.reviewers.length > 0 ? appState.reviewers[0].id : null;
     }
-    saveReviewers();
+    saveReviewersToLocalCache();
+    deleteReviewerFromCloud(reviewerId);
     renderDashboard();
 
     if (appState.reviewers.length === 0) {

@@ -1628,5 +1628,41 @@ body {
   pointer-events: none !important;
 }
 
+/* =====================================================
+   Cloud Sync Status Indicator
+   ===================================================== */
+.cloud-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
 
+.cloud-sync-pill i {
+  font-size: 0.625rem;
+}
 
+.cloud-sync-pill.cloud-syncing {
+  animation: cloud-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cloud-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Hide on very small screens to avoid header crowding */
+@media (max-width: 420px) {
+  .cloud-sync-pill {
+    display: none;
+  }
+}
